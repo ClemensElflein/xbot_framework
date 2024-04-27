@@ -1,0 +1,57 @@
+//
+// Created by clemens on 3/25/24.
+//
+
+#ifndef HEADER_HPP
+#define HEADER_HPP
+
+#include <cstdint>
+
+namespace xbot::comms::datatypes
+{
+    enum class MessageType : uint8_t
+    {
+        // First bit 0, the payload is "raw".
+        // Use for simple, but frequent messages (e.g. sensor data, ack messages, ...).
+        UNKNOWN = 0x00,
+        // Use DATA for inputs and outputs.
+        DATA = 0x01,
+        // Use Configuration for setting the service configuration.
+        CONFIGURATION = 0x02,
+        // For remote debug logging
+        LOG = 0x7F,
+        // First bit 1, the payload is JSON encoded.
+        // Use for complex, infrequent, non-realtime critical messages (e.g. service discovery).
+        SERVICE_ADVERTISEMENT = 0x80,
+        SERVICE_QUERY = 0x81
+    };
+
+#pragma pack(push, 1)
+    struct XbotHeader
+    {
+        // Version of the protocol, increment on breaking changes.
+        // 1 = initial release
+        uint8_t protocol_version{};
+        // 8 bit message type
+        MessageType message_type{};
+        // Flags.
+        // Bit 0: Reboot (1 after service started, 0 after sequence_no rolled over at least once)
+        uint8_t flags{};
+        // Reserved for message specific payload (e.g. log level for log message)
+        uint8_t arg1{};
+        // Reserved for message specific payload (e.g. target_id for data message)
+        uint16_t arg2{};
+        // Sequence number, increment on each message. Clear "reboot" flag on roll over
+        uint16_t sequence_no{};
+        // Message timestamp. Unix timestamp in nanoseconds.
+        // Nanoseconds because we need 64 bit anyways and even with nanoseconds we have until year 2554 before it rolls over.
+        uint64_t timestamp{};
+        // Length of payload in bytes. Especially important for "raw" messages.
+        // Also this allows us to chain multiple xBot packets into a single UDP packet in the future.
+        uint32_t payload_size{};
+    } __attribute__((packed));
+#pragma pack(pop)
+
+}
+
+#endif //HEADER_HPP

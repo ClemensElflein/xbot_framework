@@ -1,0 +1,164 @@
+//
+// Created by clemens on 3/20/24.
+//
+#include <Service.hpp>
+#include <ulog.h>
+
+#include "Lock.hpp"
+#include "portable/system.hpp"
+
+uint8_t xbot::comms::Service::sd_buffer[] = {};
+xbot::comms::MutexPtr xbot::comms::Service::sd_buffer_mutex = createMutex();
+
+xbot::comms::Service::Service(uint16_t service_id, uint32_t tick_rate_micros) :
+    tick_rate_micros_(tick_rate_micros),
+    service_id_(service_id),
+    udp_socket_(createSocket(false)),
+    state_mutex_(createMutex()),
+    packet_queue_ptr_(createQueue(10))
+{
+    // Set reboot flag
+    header_.flags = 1;
+}
+
+xbot::comms::Service::~Service()
+{
+    deleteSocket(udp_socket_);
+    deleteMutex(state_mutex_);
+    deleteThread(process_thread_);
+}
+
+bool xbot::comms::Service::start()
+{
+    stopped = false;
+
+    process_thread_ = createThread(Service::startProcessingHelper, this);
+    io_thread_ = createThread(Service::startIoHelper, this);
+
+    // Error creating thread
+    return process_thread_ != nullptr;
+}
+
+bool xbot::comms::Service::SendData(uint16_t target_id, const void *data, size_t size) {
+    if(target_ip == 0 || target_port == 0) {
+        ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
+        return false;
+    }
+    fillHeader();
+    header_.message_type = datatypes::MessageType::DATA;
+    header_.payload_size = size;
+    header_.arg2 = target_id;
+
+    // Send header and data
+    PacketPtr ptr = allocatePacket();
+    packetAppendData(ptr, &header_, sizeof(header_));
+    packetAppendData(ptr, data, size);
+    return socketTransmitPacket(udp_socket_, ptr, config::sd_multicast_address, config::multicast_port);
+}
+
+void xbot::comms::Service::runIo() {
+    while(true) {
+        // Check, if we should stop
+        {
+            Lock lk(state_mutex_);
+            if (stopped)
+            {
+                return;
+            }
+        }
+
+        PacketPtr packet = nullptr;
+        if(receivePacket(udp_socket_, &packet)) {
+            // Got a packet, check if valid and put it into the processing queue.
+            if(packet->used_data < sizeof(datatypes::XbotHeader)) {
+                ULOG_ARG_ERROR(&service_id_, "Packet too short to contain header.");
+                freePacket(packet);
+                continue;
+            }
+
+            const auto header = reinterpret_cast<datatypes::XbotHeader*>(packet->buffer);
+            // Check, if the header size is correct
+            if(packet->used_data - sizeof(datatypes::XbotHeader) != header->payload_size) {
+                // TODO: In order to allow chaining of xBot packets in the future, this needs to be adapted.
+                // (scan and split packets)
+                ULOG_ARG_ERROR(&service_id_, "Packet header size does not match actual packet size.");
+                freePacket(packet);
+                continue;
+            }
+
+            if(!queuePushItem(packet_queue_ptr_, packet)) {
+                ULOG_ARG_ERROR(&service_id_, "Error pushing packet into processing queue.");
+                freePacket(packet);
+                continue;
+            }
+        }
+    }
+}
+
+void xbot::comms::Service::fillHeader() {
+    header_.message_type = datatypes::MessageType::UNKNOWN;
+    header_.payload_size = 0;
+    header_.protocol_version = 1;
+    header_.arg1 = 0;
+    header_.arg2 = 0;
+    header_.sequence_no++;
+    if(header_.sequence_no == 0) {
+        // Clear reboot flag on rolloger
+        header_.flags &= 0xFE;
+    }
+    header_.timestamp = getTimeMicros();
+}
+
+void xbot::comms::Service::runProcessing()
+{
+    // Check, if we should stop
+    {
+        Lock lk(state_mutex_);
+        last_tick_micros_ = getTimeMicros();
+    }
+    while (true)
+    {
+        // Check, if we should stop
+        {
+            Lock lk(state_mutex_);
+            if (stopped)
+            {
+                return;
+            }
+        }
+
+        // Fetch from queue
+        PacketPtr packet;
+        uint32_t now_micros = getTimeMicros();
+        // Calculate when the next tick needs to happen (expected tick rate - time elapsed)
+        uint32_t time_to_next_tick = tick_rate_micros_-(now_micros - last_tick_micros_);
+        // If this is ture, we have a rollover (since we should need to wait longer than the tick length)
+        if(time_to_next_tick > tick_rate_micros_)
+        {
+            ULOG_ARG_WARNING(&service_id_, "Service too slow to keep up with tick rate.");
+            time_to_next_tick = 0;
+        }
+
+        if (queuePopItem(packet_queue_ptr_, reinterpret_cast<void**>(&packet), time_to_next_tick))
+        {
+            const auto header = reinterpret_cast<datatypes::XbotHeader*>(packet->buffer);
+
+            // TODO: filter message type, sender, ...
+
+
+
+            // Packet seems OK, hand to service
+            handlePacket(header, packet->buffer + sizeof(datatypes::XbotHeader));
+
+            freePacket(packet);
+        }
+        // Measure time required for the tick() call, so that we can substract before next timeout
+        last_tick_micros_ = getTimeMicros();
+        tick();
+        if(last_service_discovery_micros_+config::sd_advertisement_interval_micros < getTimeMicros()) {
+            ULOG_ARG_DEBUG(&service_id_, "Sending SD advetisement");
+            advertiseService();
+        }
+    }
+}
+
