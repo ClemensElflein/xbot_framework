@@ -17,6 +17,5 @@ execute_process(COMMAND ${Python3_EXECUTABLE} -m pip install -r "${PROJECT_SOURC
 
 set(XBOT_CODEGEN_PATH "${PROJECT_SOURCE_DIR}" CACHE PATH "Path to xbot codegen")
 set(Python3_EXECUTABLE "${Python3_EXECUTABLE}" CACHE PATH "Path to Pyhton 3 venv")
-#message(${XBOT_CODEGEN_PATH})
 
 include(cmake/AddService.cmake)

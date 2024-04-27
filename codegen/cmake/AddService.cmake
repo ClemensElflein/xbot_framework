@@ -1,6 +1,4 @@
 function(add_service SERVICE_NAME JSON_FILE)
-
-    message(${XBOT_CODEGEN_PATH})
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/include/${SERVICE_NAME}Base.hpp ${CMAKE_CURRENT_BINARY_DIR}/generated/${SERVICE_NAME}Base.cpp
             COMMAND ${Python3_EXECUTABLE} -m cogapp -d -I ${XBOT_CODEGEN_PATH}/xbot_codegen -D service_file=${JSON_FILE} -o ${CMAKE_CURRENT_BINARY_DIR}/generated/include/${SERVICE_NAME}Base.hpp ${XBOT_CODEGEN_PATH}/templates/ServiceTemplate.hpp
