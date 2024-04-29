@@ -1,21 +1,21 @@
 //
-// Created by clemens on 3/21/24.
+// Created by clemens on 4/29/24.
 //
-#include <cstdio>
-#include <portable/socket.hpp>
 
-#include <arpa/inet.h>
-#include <pthread.h>
-#include <sys/types.h>
-#include <ifaddrs.h>
+#include "Socket.hpp"
+
 #include <cstring>
-#include <unistd.h>
+#include <arpa/inet.h>
 #include <net/if.h>
+#include <netinet/in.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <utility>
+#include <xbot/config.hpp>
 
-#include "xbot/config.hpp"
+using namespace xbot::hub;
 
-bool get_ip(char* ip, size_t ip_len) {
+bool get_ip(std::string &ip) {
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
     if(fd < 0) {
         perror("socket");
@@ -49,11 +49,7 @@ bool get_ip(char* ip, size_t ip_len) {
 
 
         const char* addrStr = inet_ntoa(reinterpret_cast<struct sockaddr_in *>(&ifr.ifr_addr)->sin_addr);
-        if (strlen(addrStr) >= ip_len) {
-            break;
-        }
-
-        strncpy(ip, addrStr, ip_len);
+        ip = addrStr;
         success = true;
         break;
     }
@@ -62,13 +58,24 @@ bool get_ip(char* ip, size_t ip_len) {
     return success;
 }
 
-xbot::comms::SocketPtr xbot::comms::createSocket(bool bind_multicast)
-{
+Socket::Socket(std::string bind_address, u_int16_t bind_port) : bind_ip_(std::move(bind_address)), bind_port_(bind_port) {
+}
+
+bool Socket::Start() {
     // Create a UDP socket
-    int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if (fd < 0)
+    fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+    // Bind Socket
+    sockaddr_in saddr{};
+    saddr.sin_family = AF_INET;
+    saddr.sin_addr.s_addr = inet_addr(bind_ip_.c_str());
+    saddr.sin_port = htons(bind_port_);
+
+    if (bind(fd_, reinterpret_cast<sockaddr*>(&saddr), sizeof(saddr)) < 0)
     {
-        return nullptr;
+        close(fd_);
+        fd_ = -1;
+        return false;
     }
 
     // Set receive timeout
@@ -76,15 +83,23 @@ xbot::comms::SocketPtr xbot::comms::createSocket(bool bind_multicast)
         timeval opt{};
         opt.tv_sec = 1;
         opt.tv_usec = 0;
-        if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &opt, sizeof(opt)) < 0)
+        if (setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &opt, sizeof(opt)) < 0)
         {
-            close(fd);
-            return nullptr;
+            close(fd_);
+            fd_ = -1;
+            return false;
         }
     }
 
-    if (bind_multicast)
-    {
+    return true;
+}
+
+bool Socket::JoinMulticast(std::string ip) {
+    if(fd_ == -1)
+        return false;
+
+    if(!multicast_bound_) {
+        /*
         // Allow multiple binaries listening on the same socket.
         {
             int opt = 1;
@@ -106,129 +121,103 @@ xbot::comms::SocketPtr xbot::comms::createSocket(bool bind_multicast)
                 return nullptr;
             }
         }
+        */
 
-        sockaddr_in saddr{};
-        saddr.sin_family = AF_INET;
-        saddr.sin_addr.s_addr = INADDR_ANY;
-        saddr.sin_port = htons(config::multicast_port);
 
-        // Bind to any address (i.e. 0.0.0.0:port)
-        if (bind(fd, reinterpret_cast<sockaddr*>(&saddr), sizeof(saddr)) < 0)
-        {
-            close(fd);
-            return nullptr;
-        }
+
+
+        multicast_bound_ = true;
     }
 
-    // Create a pointer to the fd and return it.
-    auto fdPtr = new int;
-    *fdPtr = fd;
-    return fdPtr;
-}
-
-void xbot::comms::deleteSocket(SocketPtr socket)
-{
-    if (socket != nullptr)
-    {
-        auto fd_ptr = static_cast<int*>(socket);
-        close(*fd_ptr);
-        delete fd_ptr;
-    }
-}
-
-bool xbot::comms::subscribeMulticast(SocketPtr socket, const char* ip)
-{
     ip_mreq opt{};
     opt.imr_interface.s_addr = 0;
-    opt.imr_multiaddr.s_addr = inet_addr(ip);
+    opt.imr_multiaddr.s_addr = inet_addr(ip.c_str());
 
-    if (setsockopt(*static_cast<int*>(socket), IPPROTO_IP, IP_ADD_MEMBERSHIP, &opt, sizeof(opt)) < 0)
+    if (setsockopt(fd_, IPPROTO_IP, IP_ADD_MEMBERSHIP, &opt, sizeof(opt)) < 0)
     {
+        close(fd_);
+        fd_ = -1;
         return false;
     }
     return true;
 }
 
-bool xbot::comms::receivePacket(SocketPtr socket, PacketPtr* packet)
-{
-    const PacketPtr pkt = allocatePacket();
+bool Socket::ReceivePacket(uint32_t &sender_ip, uint16_t &sender_port, std::vector<uint8_t> &data) const {
+    if(fd_ == -1)
+        return false;
+    data.clear();
+
     sockaddr_in fromAddr{};
     socklen_t fromLen = sizeof(fromAddr);
-    const ssize_t recvLen = recvfrom(*static_cast<int*>(socket), pkt->buffer, config::max_packet_size, 0,
+
+    data.resize(config::max_packet_size);
+
+    const ssize_t recvLen = recvfrom(fd_, data.data(), data.size(), 0,
                                      reinterpret_cast<struct sockaddr*>(&fromAddr), &fromLen);
     if (recvLen < 0)
     {
-        freePacket(pkt);
         return false;
     }
-    pkt->used_data = recvLen;
-    *packet = pkt;
+    // Set the vector's size
+    data.resize(recvLen);
+    sender_ip = fromAddr.sin_addr.s_addr;
+    sender_port = fromAddr.sin_port;
     return true;
 }
 
-bool xbot::comms::socketTransmitPacket(SocketPtr socket, PacketPtr packet, uint32_t ip, uint16_t port) {
+bool Socket::TransmitPacket(uint32_t ip, uint16_t port, const std::vector<uint8_t> &data) {
+    if(fd_ == -1)
+        return false;
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(ip);
 
     sendto(
-        *static_cast<int*>(socket),
-        packet->buffer,
-        packet->used_data,
+        fd_,
+        data.data(),
+        data.size(),
         0,
         reinterpret_cast<const sockaddr*>(&addr),
         sizeof(addr)
     );
 
-    freePacket(packet);
-
     return true;
 }
 
-bool xbot::comms::socketTransmitPacket(SocketPtr socket, PacketPtr packet, const char* ip, uint16_t port)
-{
-    return socketTransmitPacket(socket, packet, ntohl(inet_addr(ip)), port);
+bool Socket::TransmitPacket(std::string ip, uint16_t port, const std::vector<uint8_t> &data) {
+    return TransmitPacket(ntohl(inet_addr(ip.c_str())), port, data);
 }
 
-bool xbot::comms::socketGetEndpoint(SocketPtr socket, char *ip, size_t ip_len, uint16_t *port) {
-
-    if (socket == nullptr || ip == nullptr || port == nullptr)
+bool Socket::GetEndpoint(std::string ip, uint16_t &port) {
+    if(fd_ == -1)
         return false;
 
     sockaddr_in addr{};
     socklen_t addrLen = sizeof(addr);
 
-    if (getsockname(*static_cast<int*>(socket), reinterpret_cast<sockaddr*>(&addr), &addrLen) < 0)
+    if (getsockname(fd_, reinterpret_cast<sockaddr*>(&addr), &addrLen) < 0)
         return false;
 
     if(addr.sin_addr.s_addr == 0) {
         // Socket bound to all interfaces, get primary IP
-        if(!get_ip(ip, ip_len)) {
+        if(!get_ip(ip)) {
             return false;
         }
     } else {
         // Socket bound to single interface, use this IP
         const char* addrStr = inet_ntoa(addr.sin_addr);
-        if (strlen(addrStr) >= ip_len)
-            return false;
-
-        strncpy(ip, addrStr, ip_len);
+        ip = addrStr;
     }
 
-    *port = ntohs(addr.sin_port);
+    port = ntohs(addr.sin_port);
 
     return true;
 }
 
-
-bool xbot::comms::closeSocket(SocketPtr socket)
-{
-    if (socket == nullptr)
-        return true;
-    if (close(*(int*)socket) < 0)
-    {
-        return false;
+Socket::~Socket() {
+    if(fd_ != -1) {
+        close(fd_);
+        fd_ = -1;
     }
-    return true;
 }

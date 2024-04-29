@@ -6,19 +6,19 @@
 #include <ulog.h>
 
 #include "portable/socket.hpp"
-#include <config.hpp>
+#include <xbot/config.hpp>
 #include <cstdio>
 #include <cstring>
 
 #include "Lock.hpp"
-#include "datatypes/LogPayload.hpp"
-#include "datatypes/XbotHeader.hpp"
+#include "xbot/datatypes/LogPayload.hpp"
+#include "xbot/datatypes/XbotHeader.hpp"
 
 using namespace xbot::comms;
 
 MutexPtr logging_mutex = nullptr;
 SocketPtr logging_socket = nullptr;
-uint8_t log_packet_buffer[config::max_packet_size];
+uint8_t log_packet_buffer[xbot::config::max_packet_size];
 
 datatypes::XbotHeader log_message_header{};
 
@@ -38,9 +38,9 @@ void remote_logger(ulog_level_t severity, char *msg, const void* args) {
     log_message_header.timestamp = 0;
 
 
-    int written = snprintf(msg, config::max_log_length, "[%s]: %s",ulog_level_name(severity), msg);
+    int written = snprintf(msg, xbot::config::max_log_length, "[%s]: %s",ulog_level_name(severity), msg);
 
-    if(written > 0 && written < config::max_log_length)
+    if(written > 0 && written < xbot::config::max_log_length)
     {
         // Need to add that terminating 0, for cppserdes to copy it.
         log_message_header.payload_size = written+1;

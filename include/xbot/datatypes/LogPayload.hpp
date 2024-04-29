@@ -6,8 +6,8 @@
 #define LOGPAYLOAD_HPP
 
 #include <cstdint>
-#include <datatypes/XbotHeader.hpp>
-#include <config.hpp>
+#include <xbot/datatypes/XbotHeader.hpp>
+#include <xbot/config.hpp>
 
 namespace xbot::comms::datatypes
 {

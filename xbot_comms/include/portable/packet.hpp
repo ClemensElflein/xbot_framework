@@ -5,7 +5,7 @@
 #ifndef PACKET_HPP
 #define PACKET_HPP
 #include <cstdint>
-#include <config.hpp>
+#include <xbot/config.hpp>
 
 namespace xbot::comms
 {

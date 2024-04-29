@@ -5,7 +5,9 @@
 #ifndef SERVICE_HPP
 #define SERVICE_HPP
 
-#include "datatypes/XbotHeader.hpp"
+#include <xbot/config.hpp>
+
+#include "xbot/datatypes/XbotHeader.hpp"
 #include "portable/mutex.hpp"
 #include "portable/queue.hpp"
 #include "portable/socket.hpp"

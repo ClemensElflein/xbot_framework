@@ -70,8 +70,8 @@ void ServiceTemplateBase::advertiseService() {
     xbot::comms::Lock lk{sd_buffer_mutex};
     size_t index = 0;
     // Build CBOR payload
-    // 0xA3 = object with 4 entries
-    sd_buffer[index++] = 0xA3;
+    // 0xA4 = object with 4 entries
+    sd_buffer[index++] = 0xA4;
     // Key1
     // 0x62 = text(3)
     sd_buffer[index++] = 0x63;
@@ -187,7 +187,7 @@ void ServiceTemplateBase::advertiseService() {
     xbot::comms::PacketPtr ptr = xbot::comms::allocatePacket();
     packetAppendData(ptr, &header, sizeof(header));
     packetAppendData(ptr, sd_buffer, header.payload_size);
-    socketTransmitPacket(udp_socket_, ptr, xbot::comms::config::sd_multicast_address, xbot::comms::config::multicast_port);
+    socketTransmitPacket(udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
 }
 
 /*[[[cog

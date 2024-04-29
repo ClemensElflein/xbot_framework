@@ -4,7 +4,7 @@
 
 #include <cstdlib>
 #include <portable/packet.hpp>
-#include <config.hpp>
+#include <xbot/config.hpp>
 #include <cstring>
 
 xbot::comms::PacketPtr xbot::comms::allocatePacket()

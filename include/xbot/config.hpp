@@ -6,7 +6,7 @@
 #define CONFIG_HPP
 #include <cstdint>
 
-namespace xbot::comms::config {
+namespace xbot::config {
     static constexpr uint16_t max_packet_size = 1500;
     static constexpr uint16_t max_service_count = 25;
 

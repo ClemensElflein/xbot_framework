@@ -2,5 +2,7 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/xbot_comms/ext/cpputest" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/xbot_comms/ext/ulog" vcs="Git" />
   </component>
 </project>

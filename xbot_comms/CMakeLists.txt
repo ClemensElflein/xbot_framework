@@ -14,7 +14,6 @@ add_subdirectory(ext)
 
 add_library(xbot_comms STATIC
         include/Service.hpp
-        include/config.hpp
         include/portable/queue.hpp
         include/portable/socket.hpp
         include/portable/packet.hpp

@@ -7,6 +7,7 @@
 #include <mutex>
 #include <condition_variable>
 
+
 // Simple blocking queue implementation
 class BlockingQueue
 {
