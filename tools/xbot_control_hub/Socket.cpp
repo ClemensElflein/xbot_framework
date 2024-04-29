@@ -160,8 +160,8 @@ bool Socket::ReceivePacket(uint32_t &sender_ip, uint16_t &sender_port, std::vect
     }
     // Set the vector's size
     data.resize(recvLen);
-    sender_ip = fromAddr.sin_addr.s_addr;
-    sender_port = fromAddr.sin_port;
+    sender_ip = ntohl(fromAddr.sin_addr.s_addr);
+    sender_port = ntohs(fromAddr.sin_port);
     return true;
 }
 

@@ -12,8 +12,51 @@
 namespace xbot::hub {
     class ServiceInfo {
     public:
+        ServiceInfo(const ServiceInfo &other)
+            : unique_id_(other.unique_id_),
+              ip_(other.ip_),
+              port_(other.port_),
+              type_(other.type_),
+              version_(other.version_),
+              inputs_(other.inputs_) {
+        }
+
+        ServiceInfo(ServiceInfo &&other) noexcept
+            : unique_id_(std::move(other.unique_id_)),
+              ip_(other.ip_),
+              port_(other.port_),
+              type_(std::move(other.type_)),
+              version_(other.version_),
+              inputs_(std::move(other.inputs_)) {
+        }
+
+        ServiceInfo & operator=(const ServiceInfo &other) {
+            if (this == &other)
+                return *this;
+            unique_id_ = other.unique_id_;
+            ip_ = other.ip_;
+            port_ = other.port_;
+            type_ = other.type_;
+            version_ = other.version_;
+            inputs_ = other.inputs_;
+            return *this;
+        }
+
+        ServiceInfo & operator=(ServiceInfo &&other) noexcept {
+            if (this == &other)
+                return *this;
+            unique_id_ = std::move(other.unique_id_);
+            ip_ = other.ip_;
+            port_ = other.port_;
+            type_ = std::move(other.type_);
+            version_ = other.version_;
+            inputs_ = std::move(other.inputs_);
+            return *this;
+        }
+
+
         ServiceInfo(std::string unique_id, uint32_t ip, uint16_t port, std::string type, uint32_t version,
-            std::vector<ServiceInputInfo> inputs)
+                    std::vector<ServiceInputInfo> inputs)
             : unique_id_(std::move(unique_id)),
               ip_(ip),
               port_(port),
@@ -25,21 +68,21 @@ namespace xbot::hub {
 
         // Unique ID for this service. This is used to address the service.
         // It is constructed of the fixed node ID in HEX and the serviceID.
-        const std::string unique_id_;
+        std::string unique_id_;
 
         // Endpoint info on where to reach the service
-        const uint32_t ip_;
-        const uint16_t port_;
+        uint32_t ip_;
+        uint16_t port_;
 
 
         // Type of the service (e.g. IMU Service)
-        const std::string type_;
+        std::string type_;
 
         // Version of the service (changes whenever the interface introduces breaking changes)
-        const uint32_t version_;
+        uint32_t version_;
 
         // Inputs for this service
-        const std::vector<ServiceInputInfo> inputs_;
+        std::vector<ServiceInputInfo> inputs_;
     };
 } // xbot::hub
 

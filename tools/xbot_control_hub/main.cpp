@@ -1,7 +1,6 @@
 #include <Socket.hpp>
 
 #include "crow.h"
-#include <xbot/config.hpp>
 #include <nlohmann/json.hpp>
 #include "ServiceDiscovery.hpp"
 
