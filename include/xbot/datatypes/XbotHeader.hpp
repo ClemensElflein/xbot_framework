@@ -16,8 +16,11 @@ namespace xbot::comms::datatypes
         UNKNOWN = 0x00,
         // Use DATA for inputs and outputs.
         DATA = 0x01,
-        // Use Configuration for setting the service configuration.
+        // Use Configuration for setting the service registers.
         CONFIGURATION = 0x02,
+        // User CLAIM in order to claim a service. Payload is IP (uint32_t) and port(uint16_t).
+        // Service will reply with CLAM with arg1 == true for ack
+        CLAIM = 0x03,
         // For remote debug logging
         LOG = 0x7F,
         // First bit 1, the payload is JSON encoded.

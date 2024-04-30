@@ -17,9 +17,10 @@ namespace xbot::hub {
          * This is because we don't want to throw exceptions in the constructor.
          *
          * @param bind_address The address to bind to. 0.0.0.0 to bind to any interface
-         * @param bind_port The port to bind to.
+         * @param bind_port The port to bind to. 0 for random port.
          */
         Socket(std::string bind_address, u_int16_t bind_port);
+        Socket(std::string bind_address);
 
         /**
          * Call to start the socket. This will actually create and bind the socket.
@@ -68,14 +69,13 @@ namespace xbot::hub {
          * @param port return value for the port
          * @return true on success
          */
-        bool GetEndpoint(std::string ip, uint16_t &port);
+        bool GetEndpoint(std::string &ip, uint16_t &port);
 
         ~Socket();
 
     private:
         // fd for the socket. -1 = no socket (safe to use, since socket() call will also return -1 on err)
         int fd_ = -1;
-        bool multicast_bound_ = false;
 
         std::string bind_ip_;
         uint16_t bind_port_;

@@ -69,6 +69,9 @@ namespace xbot::comms
         SocketPtr udp_socket_;
 
         bool SendData(uint16_t target_id, const void* data, size_t size);
+
+
+
     private:
         /**
          * The main thread for the service.
@@ -99,6 +102,7 @@ namespace xbot::comms
 
         void fillHeader();
 
+        bool SendDataClaimAck();
         virtual void advertiseService() = 0;
         virtual void tick() = 0;
         virtual bool handlePacket(const datatypes::XbotHeader* header, const void* payload) = 0;

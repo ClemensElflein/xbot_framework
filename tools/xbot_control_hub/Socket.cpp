@@ -61,6 +61,9 @@ bool get_ip(std::string &ip) {
 Socket::Socket(std::string bind_address, u_int16_t bind_port) : bind_ip_(std::move(bind_address)), bind_port_(bind_port) {
 }
 
+Socket::Socket(std::string bind_address) : Socket(std::move(bind_address), 0) {
+}
+
 bool Socket::Start() {
     // Create a UDP socket
     fd_ = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -97,38 +100,6 @@ bool Socket::Start() {
 bool Socket::JoinMulticast(std::string ip) {
     if(fd_ == -1)
         return false;
-
-    if(!multicast_bound_) {
-        /*
-        // Allow multiple binaries listening on the same socket.
-        {
-            int opt = 1;
-            if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
-            {
-                close(fd);
-                return nullptr;
-            }
-        }
-
-        // Make sure that multiple instances can talk to each other
-        // This is done by enabling the loop back.
-        // We need to make sure in the service, that the services don't process their own messages though.
-        {
-            int opt = 1;
-            if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &opt, sizeof(opt)) < 0)
-            {
-                close(fd);
-                return nullptr;
-            }
-        }
-        */
-
-
-
-
-        multicast_bound_ = true;
-    }
-
     ip_mreq opt{};
     opt.imr_interface.s_addr = 0;
     opt.imr_multiaddr.s_addr = inet_addr(ip.c_str());
@@ -189,7 +160,7 @@ bool Socket::TransmitPacket(std::string ip, uint16_t port, const std::vector<uin
     return TransmitPacket(ntohl(inet_addr(ip.c_str())), port, data);
 }
 
-bool Socket::GetEndpoint(std::string ip, uint16_t &port) {
+bool Socket::GetEndpoint(std::string &ip, uint16_t &port) {
     if(fd_ == -1)
         return false;
 

@@ -53,7 +53,23 @@ bool xbot::comms::Service::SendData(uint16_t target_id, const void *data, size_t
     PacketPtr ptr = allocatePacket();
     packetAppendData(ptr, &header_, sizeof(header_));
     packetAppendData(ptr, data, size);
-    return socketTransmitPacket(udp_socket_, ptr, config::sd_multicast_address, config::multicast_port);
+    return socketTransmitPacket(udp_socket_, ptr, target_ip, target_port);
+}
+
+bool xbot::comms::Service::SendDataClaimAck() {
+    if(target_ip == 0 || target_port == 0) {
+        ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
+        return false;
+    }
+    fillHeader();
+    header_.message_type = datatypes::MessageType::CLAIM;
+    header_.payload_size = 0;
+    header_.arg1 = 1;
+
+    // Send header and data
+    PacketPtr ptr = allocatePacket();
+    packetAppendData(ptr, &header_, sizeof(header_));
+    return socketTransmitPacket(udp_socket_, ptr, target_ip, target_port);
 }
 
 void xbot::comms::Service::runIo() {
@@ -145,10 +161,23 @@ void xbot::comms::Service::runProcessing()
 
             // TODO: filter message type, sender, ...
 
+            if(header->message_type == datatypes::MessageType::CLAIM) {
+                ULOG_ARG_INFO(&service_id_, "Received claim message");
+                if(header->payload_size != sizeof(uint32_t) + sizeof(uint16_t)) {
+                    ULOG_ARG_ERROR(&service_id_, "claim message with invalid payload size");
+                } else {
+                    // it's ok, overwrite the target
+                    target_ip = *reinterpret_cast<uint32_t*>(packet->buffer+sizeof(datatypes::XbotHeader));
+                    target_port = *reinterpret_cast<uint16_t*>(packet->buffer+sizeof(datatypes::XbotHeader)+sizeof(uint32_t));
+                    ULOG_ARG_INFO(&service_id_, "service claimed successfully.");
 
+                    SendDataClaimAck();
+                }
+            } else {
+                // Packet seems OK, hand to service
+                handlePacket(header, packet->buffer + sizeof(datatypes::XbotHeader));
+            }
 
-            // Packet seems OK, hand to service
-            handlePacket(header, packet->buffer + sizeof(datatypes::XbotHeader));
 
             freePacket(packet);
         }
