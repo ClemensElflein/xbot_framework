@@ -92,11 +92,15 @@ namespace xbot::comms
         uint32_t tick_rate_micros_;
         uint32_t last_tick_micros_ = 0;
         uint32_t last_service_discovery_micros_ = 0;
-
+        uint32_t last_heartbeat_micros_ = 0;
+        uint32_t heartbeat_micros_ = 0;
         uint32_t target_ip = 0;
         uint32_t target_port = 0;
 
         bool stopped = true;
+
+        void heartbeat();
+
         void runProcessing();
         void runIo();
 

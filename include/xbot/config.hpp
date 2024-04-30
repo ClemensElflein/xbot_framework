@@ -39,6 +39,15 @@ namespace xbot::config {
     static constexpr uint32_t sd_advertisement_interval_micros = 10000000;
 
 
+    /**
+     * Default heartbeat value, a different value can be requested by the service interface.
+     */
+    static constexpr uint32_t default_heartbeat_micros = 1000000;
+    /**
+     * Max micros to wait on top of default_heartbeat_micros before considering a service disconnected
+     */
+    static constexpr uint32_t heartbeat_jitter = 100000;
+
     static_assert(max_log_length > 100);
 }
 

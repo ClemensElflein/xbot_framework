@@ -136,7 +136,7 @@ bool Socket::ReceivePacket(uint32_t &sender_ip, uint16_t &sender_port, std::vect
     return true;
 }
 
-bool Socket::TransmitPacket(uint32_t ip, uint16_t port, const std::vector<uint8_t> &data) {
+bool Socket::TransmitPacket(uint32_t ip, uint16_t port, const std::vector<uint8_t> &data) const {
     if(fd_ == -1)
         return false;
     sockaddr_in addr{};
@@ -156,11 +156,11 @@ bool Socket::TransmitPacket(uint32_t ip, uint16_t port, const std::vector<uint8_
     return true;
 }
 
-bool Socket::TransmitPacket(std::string ip, uint16_t port, const std::vector<uint8_t> &data) {
+bool Socket::TransmitPacket(std::string ip, uint16_t port, const std::vector<uint8_t> &data) const {
     return TransmitPacket(ntohl(inet_addr(ip.c_str())), port, data);
 }
 
-bool Socket::GetEndpoint(std::string &ip, uint16_t &port) {
+bool Socket::GetEndpoint(std::string &ip, uint16_t &port) const {
     if(fd_ == -1)
         return false;
 
@@ -183,6 +183,19 @@ bool Socket::GetEndpoint(std::string &ip, uint16_t &port) {
 
     port = ntohs(addr.sin_port);
 
+    return true;
+}
+
+bool Socket::SetReceiveTimeoutMicros(uint32_t receive_timeout_micros) {
+    timeval opt{};
+    opt.tv_sec = receive_timeout_micros/1000000;
+    opt.tv_usec = receive_timeout_micros % 1000000;
+    if (setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, &opt, sizeof(opt)) < 0)
+    {
+        close(fd_);
+        fd_ = -1;
+        return false;
+    }
     return true;
 }
 

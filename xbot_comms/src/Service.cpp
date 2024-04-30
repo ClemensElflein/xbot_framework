@@ -1,8 +1,10 @@
 //
 // Created by clemens on 3/20/24.
 //
+#include <algorithm>
 #include <Service.hpp>
 #include <ulog.h>
+#include <xbot/datatypes/ClaimPayload.hpp>
 
 #include "Lock.hpp"
 #include "portable/system.hpp"
@@ -125,6 +127,23 @@ void xbot::comms::Service::fillHeader() {
     header_.timestamp = getTimeMicros();
 }
 
+void xbot::comms::Service::heartbeat() {
+    if(target_ip == 0 || target_port == 0) {
+        last_heartbeat_micros_ = getTimeMicros();
+        return;
+    }
+    fillHeader();
+    header_.message_type = datatypes::MessageType::HEARTBEAT;
+    header_.payload_size = 0;
+    header_.arg1 = 0;
+
+    // Send header and data
+    PacketPtr ptr = allocatePacket();
+    packetAppendData(ptr, &header_, sizeof(header_));
+    socketTransmitPacket(udp_socket_, ptr, target_ip, target_port);
+    last_heartbeat_micros_ = getTimeMicros();
+}
+
 void xbot::comms::Service::runProcessing()
 {
     // Check, if we should stop
@@ -148,14 +167,21 @@ void xbot::comms::Service::runProcessing()
         uint32_t now_micros = getTimeMicros();
         // Calculate when the next tick needs to happen (expected tick rate - time elapsed)
         uint32_t time_to_next_tick = tick_rate_micros_-(now_micros - last_tick_micros_);
+        uint32_t time_to_next_heartbeat = heartbeat_micros_-(now_micros - last_heartbeat_micros_);
         // If this is ture, we have a rollover (since we should need to wait longer than the tick length)
         if(time_to_next_tick > tick_rate_micros_)
         {
             ULOG_ARG_WARNING(&service_id_, "Service too slow to keep up with tick rate.");
             time_to_next_tick = 0;
         }
-
-        if (queuePopItem(packet_queue_ptr_, reinterpret_cast<void**>(&packet), time_to_next_tick))
+        // If this is ture, we have a rollover (since we should need to wait longer than the tick length)
+        if(heartbeat_micros_ > 0 && time_to_next_heartbeat > heartbeat_micros_)
+        {
+            ULOG_ARG_WARNING(&service_id_, "Service too slow to keep up with heartbeat rate.");
+            time_to_next_heartbeat = 0;
+        }
+        const uint32_t block_time = std::min(time_to_next_tick, time_to_next_heartbeat);
+        if (queuePopItem(packet_queue_ptr_, reinterpret_cast<void**>(&packet), block_time))
         {
             const auto header = reinterpret_cast<datatypes::XbotHeader*>(packet->buffer);
 
@@ -163,12 +189,24 @@ void xbot::comms::Service::runProcessing()
 
             if(header->message_type == datatypes::MessageType::CLAIM) {
                 ULOG_ARG_INFO(&service_id_, "Received claim message");
-                if(header->payload_size != sizeof(uint32_t) + sizeof(uint16_t)) {
+                if(header->payload_size != sizeof(datatypes::ClaimPayload)) {
                     ULOG_ARG_ERROR(&service_id_, "claim message with invalid payload size");
                 } else {
                     // it's ok, overwrite the target
-                    target_ip = *reinterpret_cast<uint32_t*>(packet->buffer+sizeof(datatypes::XbotHeader));
-                    target_port = *reinterpret_cast<uint16_t*>(packet->buffer+sizeof(datatypes::XbotHeader)+sizeof(uint32_t));
+                    const auto payload_ptr = reinterpret_cast<datatypes::ClaimPayload*>(packet->buffer+sizeof(datatypes::XbotHeader));
+                    target_ip = payload_ptr->target_ip;
+                    target_port = payload_ptr->target_port;
+                    heartbeat_micros_ = payload_ptr->heartbeat_micros;
+
+                    // Send early in order to allow for jitter
+                    if(heartbeat_micros_ > config::heartbeat_jitter) {
+                        heartbeat_micros_ -= config::heartbeat_jitter;
+                    }
+
+                    // send heartbeat at twice the requested rate
+                    heartbeat_micros_>>=1;
+
+
                     ULOG_ARG_INFO(&service_id_, "service claimed successfully.");
 
                     SendDataClaimAck();
@@ -181,12 +219,20 @@ void xbot::comms::Service::runProcessing()
 
             freePacket(packet);
         }
+        uint32_t now = getTimeMicros();
         // Measure time required for the tick() call, so that we can substract before next timeout
-        last_tick_micros_ = getTimeMicros();
-        tick();
-        if(last_service_discovery_micros_+config::sd_advertisement_interval_micros < getTimeMicros()) {
+        if(last_tick_micros_ + tick_rate_micros_ < now) {
+            last_tick_micros_ = now;
+            tick();
+        }
+        if(last_service_discovery_micros_+config::sd_advertisement_interval_micros < now) {
             ULOG_ARG_DEBUG(&service_id_, "Sending SD advetisement");
             advertiseService();
+            last_service_discovery_micros_ = now;
+        }
+        if(heartbeat_micros_ > 0 && last_heartbeat_micros_+heartbeat_micros_ < now) {
+            ULOG_ARG_DEBUG(&service_id_, "Sending heartbeat");
+            heartbeat();
         }
     }
 }

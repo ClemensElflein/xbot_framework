@@ -50,7 +50,7 @@ namespace xbot::hub {
          * @param data The data to send
          * @return true on success
          */
-        bool TransmitPacket(uint32_t ip, uint16_t port, const std::vector<uint8_t> &data);
+        bool TransmitPacket(uint32_t ip, uint16_t port, const std::vector<uint8_t> &data) const;
 
         /**
          * Call to transmit data
@@ -59,7 +59,7 @@ namespace xbot::hub {
          * @param data The data to send
          * @return true on success
          */
-        bool TransmitPacket(std::string ip, uint16_t port, const std::vector<uint8_t> &data);
+        bool TransmitPacket(std::string ip, uint16_t port, const std::vector<uint8_t> &data) const;
 
         /**
          * Get the endpoint (IP / port) where this socket is reachable.
@@ -69,8 +69,12 @@ namespace xbot::hub {
          * @param port return value for the port
          * @return true on success
          */
-        bool GetEndpoint(std::string &ip, uint16_t &port);
+        bool GetEndpoint(std::string &ip, uint16_t &port) const;
 
+        /**
+         * Set Receive timeout in microseconds.
+         */
+        bool SetReceiveTimeoutMicros(uint32_t receive_timeout_micros);
         ~Socket();
 
     private:

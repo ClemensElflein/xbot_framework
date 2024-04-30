@@ -21,6 +21,8 @@ namespace xbot::comms::datatypes
         // User CLAIM in order to claim a service. Payload is IP (uint32_t) and port(uint16_t).
         // Service will reply with CLAM with arg1 == true for ack
         CLAIM = 0x03,
+        // Heartbeat is sent regularly by service to show that its alive
+        HEARTBEAT = 0x04,
         // For remote debug logging
         LOG = 0x7F,
         // First bit 1, the payload is JSON encoded.

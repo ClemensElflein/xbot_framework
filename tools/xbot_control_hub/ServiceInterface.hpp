@@ -9,7 +9,6 @@
 #include <cstddef>
 #include <Socket.hpp>
 #include <thread>
-#include <xbot/datatypes/XbotHeader.hpp>
 
 namespace xbot::hub {
     class ServiceInterface {
@@ -18,7 +17,7 @@ namespace xbot::hub {
 
         /**
          * Called whenever the service endpoint was changed.
-         * This will claim the service on the other sidde and direct its comms to this interface.
+         * This will claim the service on the other side and direct its comms to this interface.
          * @return true, on success
          */
         bool OnServiceEndpointChanged();
@@ -27,6 +26,8 @@ namespace xbot::hub {
 
     protected:
         bool SendInput(uint16_t id, void* data, size_t size);
+
+        virtual void OnOutputDataReceived(uint16_t id, void* data, size_t size);
 
     private:
 
@@ -43,29 +44,17 @@ namespace xbot::hub {
 
         // track, if we have claimed the service successfully.
         // If the service is claimed it will send its outputs to this interface.
-        bool claimed_successfully_{false};
+        std::atomic_flag claimed_successfully_{false};
+        uint32_t service_ip_{0};
+        uint16_t service_port_{0};
 
         // track when we sent the last claim, so that we don't spam the service
-        std::chrono::time_point<std::chrono::steady_clock> last_claim_sent_;
+        std::chrono::time_point<std::chrono::steady_clock> last_claim_sent_{std::chrono::seconds(0)};
+        std::chrono::time_point<std::chrono::steady_clock> last_heartbeat_received_{std::chrono::seconds(0)};
 
-        // Keep a hash of the most important parts of the info around.
-        // This way we can verify that an incoming message is actually from the service
-        // we expect it to be (theoretically anyone can send messages here and therefore we need to filter).
-        // Hashed value = XOR of all hashes: nodeid, serviceid, type, version.
-        // If any of those change, our interface rejects the messages from that service.
-        size_t service_info_hash_{0};
 
         // The socket doing the actual communication with the service.
         Socket socket_;
-
-        /**
-         * Fetches the relevant info from ServiceDiscovery and updates the local hash.
-         *
-         * @return true on success
-         */
-        bool UpdateHash();
-
-        size_t Hash(xbot::comms::datatypes::XbotHeader &header);
     };
 };
 
