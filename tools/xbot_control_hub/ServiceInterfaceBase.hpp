@@ -11,9 +11,10 @@
 #include <thread>
 
 namespace xbot::hub {
-    class ServiceInterface {
+    class ServiceInterfaceBase {
     public:
-        explicit ServiceInterface(std::string uid);
+        virtual ~ServiceInterfaceBase() = default;
+        explicit ServiceInterfaceBase(std::string uid);
 
         /**
          * Called whenever the service endpoint was changed.
@@ -25,9 +26,9 @@ namespace xbot::hub {
         bool Start();
 
     protected:
-        bool SendInput(uint16_t id, void* data, size_t size);
+        //bool SendInput(uint16_t id, void* data, size_t size);
 
-        virtual void OnOutputDataReceived(uint16_t id, void* data, size_t size);
+        virtual void OnOutputDataReceived(uint16_t id, void* data, size_t size) = 0;
 
     private:
 

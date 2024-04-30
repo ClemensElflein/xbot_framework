@@ -2,7 +2,7 @@
 // Created by clemens on 4/30/24.
 //
 
-#include "ServiceInterface.hpp"
+#include "ServiceInterfaceBase.hpp"
 #include <spdlog/spdlog.h>
 
 #include <utility>
@@ -12,27 +12,24 @@
 #include "endpoint_utils.hpp"
 #include "ServiceDiscovery.hpp"
 
-xbot::hub::ServiceInterface::ServiceInterface(std::string uid) : uid_(std::move(uid)), socket_("0.0.0.0") {
+xbot::hub::ServiceInterfaceBase::ServiceInterfaceBase(std::string uid) : uid_(std::move(uid)), socket_("0.0.0.0") {
 }
 
-bool xbot::hub::ServiceInterface::OnServiceEndpointChanged() {
+bool xbot::hub::ServiceInterfaceBase::OnServiceEndpointChanged() {
     last_claim_sent_ = std::chrono::time_point<std::chrono::steady_clock>{std::chrono::microseconds(0)};
     claimed_successfully_.clear();
     return true;
 }
 
-bool xbot::hub::ServiceInterface::Start() {
+bool xbot::hub::ServiceInterfaceBase::Start() {
     stopped_.clear();
-    io_thread_ = std::thread{&ServiceInterface::RunIo, this};
+    io_thread_ = std::thread{&ServiceInterfaceBase::RunIo, this};
 
     return true;
 }
 
-void xbot::hub::ServiceInterface::OnOutputDataReceived(uint16_t id, void *data, size_t size) {
-    spdlog::info("Got data for ID {}", id);
-}
 
-void xbot::hub::ServiceInterface::SendClaim() {
+void xbot::hub::ServiceInterfaceBase::SendClaim() {
     // Check, if we recently sent the claim. If not, try again
     auto now = std::chrono::steady_clock::now();
 
@@ -80,14 +77,14 @@ void xbot::hub::ServiceInterface::SendClaim() {
     TransmitPacket(packet);
 }
 
-bool xbot::hub::ServiceInterface::TransmitPacket(const std::vector<uint8_t> &data) {
+bool xbot::hub::ServiceInterfaceBase::TransmitPacket(const std::vector<uint8_t> &data) {
     if (service_ip_ == 0 || service_port_ == 0) {
         return false;
     }
     return socket_.TransmitPacket(service_ip_, service_port_, data);
 }
 
-void xbot::hub::ServiceInterface::RunIo() {
+void xbot::hub::ServiceInterfaceBase::RunIo() {
     claimed_successfully_.clear();
     service_ip_ = 0;
     service_port_ = 0;

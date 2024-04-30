@@ -10,8 +10,7 @@
 using namespace xbot;
 
 
-int main()
-{
+int main() {
     hub::CrowToSpeedlogHandler logger;
     crow::logger::setHandler(&logger);
 
@@ -21,13 +20,20 @@ int main()
     hub::ServiceDiscovery::Start();
 
 
-
-
     crow::SimpleApp app;
 
-    CROW_ROUTE(app, "/")([](){
+    CROW_ROUTE(app, "/")([]() {
         return "Hello world";
     });
+
+    CROW_WEBSOCKET_ROUTE(app, "/socket")
+            .onopen([&](crow::websocket::connection &conn) {
+                CROW_LOG_INFO << "New Websocket Connection";
+            }).onclose([&](crow::websocket::connection &conn, const std::string& reason) {
+                CROW_LOG_INFO << "Closed Connection. Reason: " << reason;
+            }).onmessage([&](crow::websocket::connection & /*conn*/, const std::string &data, bool is_binary) {
+                CROW_LOG_INFO << "New Websocket Message: " << data;
+            });
 
     app.port(18080).run();
 }

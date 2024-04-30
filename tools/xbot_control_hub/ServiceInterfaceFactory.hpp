@@ -8,7 +8,7 @@
 #include <string>
 
 #include "ServiceDiscovery.hpp"
-#include "ServiceInterface.hpp"
+#include "ServiceInterfaceBase.hpp"
 
 
 namespace xbot::hub {
@@ -29,7 +29,7 @@ namespace xbot::hub {
 
         static std::mutex state_mutex_;
         static std::shared_ptr<ServiceInterfaceFactory> instance_;
-        static std::map<std::string, ServiceInterface> interfaces_;
+        static std::map<std::string, std::shared_ptr<ServiceInterfaceBase>> interfaces_;
     };
 }
 
