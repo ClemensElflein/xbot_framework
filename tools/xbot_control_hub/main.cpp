@@ -17,6 +17,7 @@ int main() {
     // Register the interface factory before starting service discovery
     // this way, whenever a service is found, the appropriate interface is built automatically.
     hub::ServiceDiscovery::RegisterCallbacks(hub::ServiceInterfaceFactory::GetInstance());
+    hub::ServiceInterfaceFactory::Start();
     hub::ServiceDiscovery::Start();
 
 

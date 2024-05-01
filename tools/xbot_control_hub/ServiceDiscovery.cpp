@@ -124,13 +124,17 @@ namespace xbot::hub {
                                         spdlog::info("Endpoint updated (ID: {}, new endpoint: {})", info.unique_id_,
                                                      EndpointIntToString(info.ip_, info.port_)
                                         );
+                                        // Backup the old infos, so that we can pass them to the callback
+                                        const auto old_ip = old_service_info.ip_;
+                                        const auto old_port = old_service_info.port_;
+
                                         // Update the entry
                                         old_service_info.ip_ = info.ip_;
                                         old_service_info.port_ = info.port_;
 
                                         // Notify callbacks
                                         for(const auto& callback : registered_callbacks_) {
-                                            callback->OnEndpointChanged(info.unique_id_);
+                                            callback->OnEndpointChanged(info.unique_id_, old_ip, old_port, info.ip_, info.port_);
                                         }
                                     }
                                 } else {

@@ -13,13 +13,9 @@ add_executable(xbot_hub main.cpp Socket.cpp
         ServiceInfo.hpp
         ServiceInputInfo.hpp
         endpoint_utils.hpp
-        ServiceInterfaceBase.cpp
-        ServiceInterfaceBase.hpp
         ServiceInfo.cpp
         CrowToSpeedlogHandler.hpp
         ServiceInterfaceFactory.cpp
-        ServiceInterfaceFactory.hpp
-        GenericServiceInterface.cpp
-        GenericServiceInterface.hpp)
+        ServiceInterfaceFactory.hpp)
 target_include_directories(xbot_hub PRIVATE . ${PROJECT_SOURCE_DIR}/../../include)
 target_link_libraries(xbot_hub PRIVATE nlohmann_json::nlohmann_json cli::cli Crow spdlog::spdlog)

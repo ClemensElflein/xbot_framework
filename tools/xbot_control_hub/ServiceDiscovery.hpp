@@ -17,7 +17,7 @@ namespace xbot::hub {
         virtual ~ServiceDiscoveryCallbacks() = default;
 
         virtual bool OnServiceDiscovered(std::string uid) = 0;
-        virtual bool OnEndpointChanged(std::string uid) = 0;
+        virtual bool OnEndpointChanged(std::string uid, uint32_t old_ip, uint16_t old_port, uint32_t new_ip, uint16_t new_port) = 0;
     };
 
     class ServiceDiscovery {
