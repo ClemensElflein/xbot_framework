@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 #include <sys/types.h>
+#include <sys/socket.h>
 #include <ifaddrs.h>
 #include <cstring>
 #include <unistd.h>
@@ -14,6 +15,9 @@
 #include <sys/ioctl.h>
 
 #include "xbot/config.hpp"
+
+using namespace xbot::comms::sock;
+using namespace xbot::comms::packet;
 
 bool get_ip(char* ip, size_t ip_len) {
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -62,13 +66,14 @@ bool get_ip(char* ip, size_t ip_len) {
     return success;
 }
 
-xbot::comms::SocketPtr xbot::comms::createSocket(bool bind_multicast)
-{
+bool xbot::comms::sock::createSocket(SocketPtr socket_ptr, bool bind_multicast) {
+    *socket_ptr = -1;
     // Create a UDP socket
+
     int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (fd < 0)
     {
-        return nullptr;
+        return false;
     }
 
     // Set receive timeout
@@ -79,7 +84,7 @@ xbot::comms::SocketPtr xbot::comms::createSocket(bool bind_multicast)
         if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &opt, sizeof(opt)) < 0)
         {
             close(fd);
-            return nullptr;
+            return false;
         }
     }
 
@@ -91,7 +96,7 @@ xbot::comms::SocketPtr xbot::comms::createSocket(bool bind_multicast)
             if (setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0)
             {
                 close(fd);
-                return nullptr;
+                return false;
             }
         }
 
@@ -103,7 +108,7 @@ xbot::comms::SocketPtr xbot::comms::createSocket(bool bind_multicast)
             if (setsockopt(fd, IPPROTO_IP, IP_MULTICAST_LOOP, &opt, sizeof(opt)) < 0)
             {
                 close(fd);
-                return nullptr;
+                return false;
             }
         }
 
@@ -116,45 +121,44 @@ xbot::comms::SocketPtr xbot::comms::createSocket(bool bind_multicast)
         if (bind(fd, reinterpret_cast<sockaddr*>(&saddr), sizeof(saddr)) < 0)
         {
             close(fd);
-            return nullptr;
+            return false;
         }
     }
 
     // Create a pointer to the fd and return it.
-    auto fdPtr = new int;
-    *fdPtr = fd;
-    return fdPtr;
+    *socket_ptr = fd;
+    return true;
 }
 
-void xbot::comms::deleteSocket(SocketPtr socket)
+void xbot::comms::sock::deleteSocket(SocketPtr socket)
 {
     if (socket != nullptr)
     {
-        auto fd_ptr = static_cast<int*>(socket);
+        auto fd_ptr = socket;
         close(*fd_ptr);
         delete fd_ptr;
     }
 }
 
-bool xbot::comms::subscribeMulticast(SocketPtr socket, const char* ip)
+bool xbot::comms::sock::subscribeMulticast(SocketPtr socket, const char* ip)
 {
     ip_mreq opt{};
     opt.imr_interface.s_addr = 0;
     opt.imr_multiaddr.s_addr = inet_addr(ip);
 
-    if (setsockopt(*static_cast<int*>(socket), IPPROTO_IP, IP_ADD_MEMBERSHIP, &opt, sizeof(opt)) < 0)
+    if (setsockopt(*socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, &opt, sizeof(opt)) < 0)
     {
         return false;
     }
     return true;
 }
 
-bool xbot::comms::receivePacket(SocketPtr socket, PacketPtr* packet)
+bool xbot::comms::sock::receivePacket(SocketPtr socket, PacketPtr* packet)
 {
     const PacketPtr pkt = allocatePacket();
     sockaddr_in fromAddr{};
     socklen_t fromLen = sizeof(fromAddr);
-    const ssize_t recvLen = recvfrom(*static_cast<int*>(socket), pkt->buffer, config::max_packet_size, 0,
+    const ssize_t recvLen = recvfrom(*socket, pkt->buffer, config::max_packet_size, 0,
                                      reinterpret_cast<struct sockaddr*>(&fromAddr), &fromLen);
     if (recvLen < 0)
     {
@@ -166,7 +170,7 @@ bool xbot::comms::receivePacket(SocketPtr socket, PacketPtr* packet)
     return true;
 }
 
-bool xbot::comms::socketTransmitPacket(SocketPtr socket, PacketPtr packet, uint32_t ip, uint16_t port) {
+bool xbot::comms::sock::transmitPacket(SocketPtr socket, PacketPtr packet, uint32_t ip, uint16_t port) {
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
@@ -186,12 +190,12 @@ bool xbot::comms::socketTransmitPacket(SocketPtr socket, PacketPtr packet, uint3
     return true;
 }
 
-bool xbot::comms::socketTransmitPacket(SocketPtr socket, PacketPtr packet, const char* ip, uint16_t port)
+bool xbot::comms::sock::transmitPacket(SocketPtr socket, PacketPtr packet, const char* ip, uint16_t port)
 {
-    return socketTransmitPacket(socket, packet, ntohl(inet_addr(ip)), port);
+    return transmitPacket(socket, packet, ntohl(inet_addr(ip)), port);
 }
 
-bool xbot::comms::socketGetEndpoint(SocketPtr socket, char *ip, size_t ip_len, uint16_t *port) {
+bool xbot::comms::sock::getEndpoint(SocketPtr socket, char *ip, size_t ip_len, uint16_t *port) {
 
     if (socket == nullptr || ip == nullptr || port == nullptr)
         return false;
@@ -222,11 +226,11 @@ bool xbot::comms::socketGetEndpoint(SocketPtr socket, char *ip, size_t ip_len, u
 }
 
 
-bool xbot::comms::closeSocket(SocketPtr socket)
+bool xbot::comms::sock::closeSocket(SocketPtr socket)
 {
     if (socket == nullptr)
         return true;
-    if (close(*(int*)socket) < 0)
+    if (close(*socket) < 0)
     {
         return false;
     }

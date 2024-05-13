@@ -5,11 +5,19 @@
 #ifndef THREAD_HPP
 #define THREAD_HPP
 
-namespace xbot::comms
-{
-    typedef void* ThreadPtr;
+#include <xbot/thread_impl.hpp>
 
-    ThreadPtr createThread(void *(*threadfunc)(void*), void* arg);
+#ifndef XBOT_THREAD_TYPEDEF
+#error XBOT_THREAD_TYPEDEF undefined
+#endif
+
+
+
+namespace xbot::comms::thread
+{
+    typedef XBOT_THREAD_TYPEDEF* ThreadPtr;
+
+    bool createThread(ThreadPtr thread, void *(*threadfunc)(void*), void* arg, void* stackbuf, size_t buflen);
     void deleteThread(ThreadPtr thread);
 }
 

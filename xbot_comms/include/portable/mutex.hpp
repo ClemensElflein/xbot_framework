@@ -5,11 +5,18 @@
 #ifndef MUTEX_HPP
 #define MUTEX_HPP
 
-namespace xbot::comms
-{
-    typedef void* MutexPtr;
+#include <xbot/mutex_impl.hpp>
 
-    MutexPtr createMutex();
+#ifndef XBOT_MUTEX_TYPEDEF
+#error XBOT_MUTEX_TYPEDEF undefined
+#endif
+
+
+namespace xbot::comms::mutex
+{
+    typedef XBOT_MUTEX_TYPEDEF* MutexPtr;
+
+    bool createMutex(MutexPtr mutex);
     void deleteMutex(MutexPtr mutex);
     void lockMutex(MutexPtr mutex);
     void unlockMutex(MutexPtr mutex);

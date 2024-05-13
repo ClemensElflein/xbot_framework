@@ -67,7 +67,7 @@ cog.outl(f"void {service['class_name']}::advertiseService() {{")
 void ServiceTemplateBase::advertiseService() {
 //[[[end]]]
     static_assert(sizeof(sd_buffer)>80+sizeof(SERVICE_DESCRIPTION_CBOR), "sd_buffer too small for service description. increase size");
-    xbot::comms::Lock lk{sd_buffer_mutex};
+    xbot::comms::Lock lk{&sd_buffer_mutex};
     size_t index = 0;
     // Build CBOR payload
     // 0xA4 = object with 4 entries
@@ -82,7 +82,7 @@ void ServiceTemplateBase::advertiseService() {
     sd_buffer[index++] = 0x84;
 
     uint8_t id[16];
-    if(!getNodeId(id, 16)) {
+    if(!xbot::comms::system::getNodeId(id, 16)) {
         ULOG_ARG_ERROR(&service_id_, "Error fetching node ID");
         return;
     }
@@ -124,7 +124,7 @@ void ServiceTemplateBase::advertiseService() {
     char address[16]{};
     uint16_t port = 0;
 
-    if(!xbot::comms::socketGetEndpoint(udp_socket_, address, sizeof(address), &port)) {
+    if(!xbot::comms::sock::getEndpoint(&udp_socket_, address, sizeof(address), &port)) {
         ULOG_ARG_ERROR(&service_id_, "Error fetching socket address");
         return;
     }
@@ -177,17 +177,17 @@ void ServiceTemplateBase::advertiseService() {
     header.arg1 = 0;
     header.arg2 = 0;
     header.sequence_no = sd_sequence_++;
-    header.timestamp = getTimeMicros();
+    header.timestamp = xbot::comms::system::getTimeMicros();
 
     // Reset reboot on rollover
     if(sd_sequence_==0) {
         reboot = false;
     }
 
-    xbot::comms::PacketPtr ptr = xbot::comms::allocatePacket();
+    xbot::comms::packet::PacketPtr ptr = xbot::comms::packet::allocatePacket();
     packetAppendData(ptr, &header, sizeof(header));
     packetAppendData(ptr, sd_buffer, header.payload_size);
-    socketTransmitPacket(udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
+    xbot::comms::sock::transmitPacket(&udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
 }
 
 /*[[[cog

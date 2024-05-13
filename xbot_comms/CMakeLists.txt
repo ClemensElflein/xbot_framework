@@ -33,7 +33,7 @@ add_library(xbot_comms STATIC
         src/RemoteLogging.cpp
 )
 
-target_include_directories(xbot_comms PUBLIC include ${PROJECT_SOURCE_DIR}/../include)
+target_include_directories(xbot_comms PUBLIC include ${PROJECT_SOURCE_DIR}/../include src/portable/linux/include)
 target_link_libraries(xbot_comms PUBLIC ulog etl)
 set_property(TARGET xbot_comms PROPERTY CXX_STANDARD 23)
 

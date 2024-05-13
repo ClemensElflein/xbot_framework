@@ -4,18 +4,17 @@
 
 #ifndef PACKET_HPP
 #define PACKET_HPP
-#include <cstdint>
-#include <xbot/config.hpp>
+#include <xbot/packet_impl.hpp>
 
-namespace xbot::comms
+#ifndef XBOT_PACKET_TYPEDEF
+#error XBOT_PACKET_TYPEDEF undefined
+#endif
+
+namespace xbot::comms::packet
 {
-    struct Packet
-    {
-        size_t used_data;
-        uint8_t buffer[config::max_packet_size];
-    };
 
-    typedef Packet* PacketPtr;
+
+    typedef XBOT_PACKET_TYPEDEF* PacketPtr;
 
     /**
      * @brief Allocate a packet.
@@ -36,6 +35,9 @@ namespace xbot::comms
     void freePacket(PacketPtr packet_ptr);
 
     bool packetAppendData(PacketPtr packet, const void* buffer, size_t size);
+
+    bool packetGetData(PacketPtr packet, void** buffer, size_t *size);
+
 }
 
 #endif //PACKET_HPP

@@ -1,14 +1,15 @@
 #include <pthread.h>
 #include <portable/thread.hpp>
 
-xbot::comms::ThreadPtr xbot::comms::createThread(void*(* threadfunc)(void*), void* arg)
+using namespace xbot::comms::thread;
+
+
+bool xbot::comms::thread::createThread(ThreadPtr thread, void *(*threadfunc)(void*), void* arg, void* stackbuf, size_t buflen)
 {
-    auto thread = new pthread_t();
     pthread_create(thread, NULL, threadfunc, arg);
-    return thread;
+    return true;
 }
 
-void xbot::comms::deleteThread(ThreadPtr thread)
+void xbot::comms::thread::deleteThread(ThreadPtr thread)
 {
-    delete static_cast<pthread_t*>(thread);
 }

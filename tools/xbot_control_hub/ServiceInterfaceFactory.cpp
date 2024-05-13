@@ -4,6 +4,7 @@
 
 #include "ServiceInterfaceFactory.hpp"
 
+#include <nlohmann/json.hpp>
 #include <xbot/datatypes/ClaimPayload.hpp>
 #include <xbot/datatypes/XbotHeader.hpp>
 
@@ -94,7 +95,7 @@ void ServiceInterfaceFactory::RunIo() {
     std::vector<uint8_t> packet{};
     while (!stopped_.test()) {
         if (std::chrono::duration_cast<std::chrono::microseconds>(
-                            std::chrono::steady_clock::now() - last_check_) > std::chrono::microseconds(1000000)) {
+                std::chrono::steady_clock::now() - last_check_) > std::chrono::microseconds(1000000)) {
             spdlog::debug("running checks");
             std::unique_lock lk{state_mutex_};
             // Claim all unclaimed services and check for timeouts.
@@ -169,6 +170,27 @@ void ServiceInterfaceFactory::RunIo() {
                     const auto payload_ptr = reinterpret_cast<void *>(
                         packet.data() + sizeof(comms::datatypes::XbotHeader));
                     spdlog::info("Got data!");
+                    uint64_t stamp = header->timestamp;
+                    nlohmann::json json = {
+                        {
+                            "nest", {
+                                {"key", "some_key"},
+                                {"stamp", stamp},
+                                {"value", *reinterpret_cast<uint32_t *>(payload_ptr)}
+                            }
+                        }
+                    };
+                    std::vector<uint8_t> packet = nlohmann::json::to_cbor(json);
+                    // std::string dump = json.dump();
+                    // packet.resize(dump.size());
+                    // memcpy(packet.data(), dump.c_str(), dump.size());
+                    std::stringstream stream;
+
+                    for (const auto item: packet) {
+                        stream << std::hex << std::setw(2) << std::setfill('0') << (int) item;
+                    }
+                    spdlog::info("{}", stream.str());
+                    io_socket_.TransmitPacket("127.0.0.1", 9870, packet);
                 }
             }
         }

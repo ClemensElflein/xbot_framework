@@ -5,13 +5,13 @@
 
 #include <cassert>
 
-xbot::comms::Lock::Lock(MutexPtr mutex) : mutex_(mutex)
+xbot::comms::Lock::Lock(mutex::MutexPtr mutex) : mutex_(mutex)
 {
     assert(mutex != nullptr);
-    lockMutex(mutex_);
+    mutex::lockMutex(mutex_);
 }
 
 xbot::comms::Lock::~Lock()
 {
-    unlockMutex(mutex_);
+    mutex::unlockMutex(mutex_);
 }

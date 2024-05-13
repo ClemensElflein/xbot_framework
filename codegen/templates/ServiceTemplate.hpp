@@ -26,11 +26,19 @@ class ServiceTemplateBase : public xbot::comms::Service {
 //[[[end]]]
 public:
     /*[[[cog
+    cog.outl("#ifdef XBOT_ENABLE_STATIC_STACK")
+    cog.outl(f"explicit {service['class_name']}(uint16_t service_id, uint32_t tick_rate_micros, void* stack, size_t stack_size)")
+    cog.outl("#else")
     cog.outl(f"explicit {service['class_name']}(uint16_t service_id, uint32_t tick_rate_micros)")
+    cog.outl("#endif")
     ]]]*/
     explicit ServiceTemplateBase(uint16_t service_id, uint32_t tick_rate_micros)
     //[[[end]]]
-        : Service(service_id, tick_rate_micros) {
+    #ifdef XBOT_ENABLE_STATIC_STACK
+        : Service(service_id, tick_rate_micros, stack, stack_size) {
+    #else
+        : Service(service_id, tick_rate_micros, nullptr, 0) {
+    #endif
     }
 
     /*[[[cog
