@@ -21,23 +21,23 @@ xbot::comms::Service::Service(uint16_t service_id, uint32_t tick_rate_micros, vo
     // Set reboot flag
     header_.flags = 1;
 
-    sock::createSocket(&udp_socket_, false);
-    mutex::createMutex(&state_mutex_);
-    queue::createQueue(&packet_queue_, packet_queue_length, packet_queue_buffer, sizeof(packet_queue_buffer));
+    sock::initialize(&udp_socket_, false);
+    mutex::initialize(&state_mutex_);
+    queue::initialize(&packet_queue_, packet_queue_length, packet_queue_buffer, sizeof(packet_queue_buffer));
 }
 
 xbot::comms::Service::~Service()
 {
-    sock::deleteSocket(&udp_socket_);
-    mutex::deleteMutex(&state_mutex_);
-    thread::deleteThread(&process_thread_);
+    sock::deinitialize(&udp_socket_);
+    mutex::deinitialize(&state_mutex_);
+    thread::deinitialize(&process_thread_);
 }
 
 bool xbot::comms::Service::start()
 {
     stopped = false;
 
-    if(!thread::createThread(&process_thread_,Service::startProcessingHelper,this, processing_thread_stack_, processing_thread_stack_size_)) {
+    if(!thread::initialize(&process_thread_,Service::startProcessingHelper,this, processing_thread_stack_, processing_thread_stack_size_)) {
         return false;
     }
 #ifdef XBOT_ENABLE_STATIC_STACK
@@ -45,7 +45,7 @@ bool xbot::comms::Service::start()
         return false;
     }
 #else
-    if(!thread::createThread(&io_thread_,Service::startIoHelper,this, nullptr, 0)) {
+    if(!thread::initialize(&io_thread_,Service::startIoHelper,this, nullptr, 0)) {
         return false;
     }
 #endif

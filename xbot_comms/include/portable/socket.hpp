@@ -25,12 +25,12 @@ namespace xbot::comms::sock
      * @param bind_multicast: true to prepare the socket for listening
      * @return The created socket
      */
-    bool createSocket(SocketPtr socket, bool bind_multicast);
+    bool initialize(SocketPtr socket, bool bind_multicast);
 
     /**
      * Frees all socket resources
      */
-    void deleteSocket(SocketPtr socket);
+    void deinitialize(SocketPtr socket);
 
     /**
      * Subscribe to a streaming channel.

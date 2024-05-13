@@ -106,7 +106,7 @@ bool BlockingQueue::isFull() const
 }
 
 
-bool xbot::comms::queue::createQueue(QueuePtr queue, size_t queue_length, void *buffer, size_t buffer_size) {
+bool xbot::comms::queue::initialize(QueuePtr queue, size_t queue_length, void *buffer, size_t buffer_size) {
     // create the queue on the heap, we don't need the buffer.
     return queue->init(queue_length, buffer, buffer_size);
 }
@@ -129,7 +129,6 @@ bool xbot::comms::queue::queuePushItem(QueuePtr queue, void* item)
     return queue->push(item, 0);
 }
 
-void xbot::comms::queue::destroyQueue(QueuePtr queue)
+void xbot::comms::queue::deinitialize(QueuePtr queue)
 {
-    queue->~BlockingQueue();
 }

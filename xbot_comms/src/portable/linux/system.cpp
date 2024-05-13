@@ -78,7 +78,7 @@ namespace xbot::comms::system {
 
     void initSystem(uint32_t node_id)
     {
-        xbot::comms::mutex::createMutex(&ulog_mutex_);
+        xbot::comms::mutex::initialize(&ulog_mutex_);
 
         // Init system with a hardcoded node_id or get a random one.
         if(node_id != 0)

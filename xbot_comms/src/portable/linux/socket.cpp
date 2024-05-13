@@ -66,7 +66,7 @@ bool get_ip(char* ip, size_t ip_len) {
     return success;
 }
 
-bool xbot::comms::sock::createSocket(SocketPtr socket_ptr, bool bind_multicast) {
+bool xbot::comms::sock::initialize(SocketPtr socket_ptr, bool bind_multicast) {
     *socket_ptr = -1;
     // Create a UDP socket
 
@@ -130,7 +130,7 @@ bool xbot::comms::sock::createSocket(SocketPtr socket_ptr, bool bind_multicast) 
     return true;
 }
 
-void xbot::comms::sock::deleteSocket(SocketPtr socket)
+void xbot::comms::sock::deinitialize(SocketPtr socket)
 {
     if (socket != nullptr)
     {

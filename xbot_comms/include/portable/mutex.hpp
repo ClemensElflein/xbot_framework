@@ -16,8 +16,8 @@ namespace xbot::comms::mutex
 {
     typedef XBOT_MUTEX_TYPEDEF* MutexPtr;
 
-    bool createMutex(MutexPtr mutex);
-    void deleteMutex(MutexPtr mutex);
+    bool initialize(MutexPtr mutex);
+    void deinitialize(MutexPtr mutex);
     void lockMutex(MutexPtr mutex);
     void unlockMutex(MutexPtr mutex);
 }

@@ -6,12 +6,12 @@
 
 using namespace xbot::comms::mutex;
 
-bool xbot::comms::mutex::createMutex(MutexPtr mutex) {
+bool xbot::comms::mutex::initialize(MutexPtr mutex) {
     // nothing to initialize
     return true;
 }
 
-void xbot::comms::mutex::deleteMutex(MutexPtr mutex)
+void xbot::comms::mutex::deinitialize(MutexPtr mutex)
 {
     // nothing to uninitialize
 }

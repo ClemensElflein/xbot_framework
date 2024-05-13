@@ -17,8 +17,8 @@ namespace xbot::comms::thread
 {
     typedef XBOT_THREAD_TYPEDEF* ThreadPtr;
 
-    bool createThread(ThreadPtr thread, void *(*threadfunc)(void*), void* arg, void* stackbuf, size_t buflen);
-    void deleteThread(ThreadPtr thread);
+    bool initialize(ThreadPtr thread, void *(*threadfunc)(void*), void* arg, void* stackbuf, size_t buflen);
+    void deinitialize(ThreadPtr thread);
 }
 
 #endif //THREAD_HPP

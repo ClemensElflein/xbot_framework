@@ -59,12 +59,12 @@ void remote_logger(ulog_level_t severity, char *msg, const void* args) {
 
 bool startRemoteLogging()
 {
-    if(!mutex::createMutex(&logging_mutex)) {
+    if(!mutex::initialize(&logging_mutex)) {
         return false;
     }
 
     Lock lk(&logging_mutex);
-    if(!sock::createSocket(&logging_socket, false))
+    if(!sock::initialize(&logging_socket, false))
     {
         ULOG_ERROR("Error setting up remote logging: Error creating socket");
         return false;

@@ -18,13 +18,13 @@ namespace xbot::comms::queue
 {
     typedef XBOT_QUEUE_TYPEDEF* QueuePtr;
 
-    bool createQueue(QueuePtr queue, size_t queue_length, void* buf, size_t buflen);
+    bool initialize(QueuePtr queue, size_t queue_length, void* buf, size_t buflen);
 
     bool queuePopItem(QueuePtr queue, void** result, uint32_t timeout_micros);
 
     bool queuePushItem(QueuePtr queue, void* item);
 
-    void destroyQueue(QueuePtr queue);
+    void deinitialize(QueuePtr queue);
 }
 
 #endif //QUEUE_HPP
