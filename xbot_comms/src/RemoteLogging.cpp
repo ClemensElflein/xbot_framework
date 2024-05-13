@@ -16,8 +16,8 @@
 
 using namespace xbot::comms;
 
-MutexPtr logging_mutex = nullptr;
-SocketPtr logging_socket = nullptr;
+XBOT_MUTEX_TYPEDEF logging_mutex{};
+XBOT_SOCKET_TYPEDEF logging_socket{};
 uint8_t log_packet_buffer[xbot::config::max_packet_size];
 
 datatypes::XbotHeader log_message_header{};
@@ -25,7 +25,7 @@ datatypes::XbotHeader log_message_header{};
 uint16_t log_sequence_no = 0;
 
 void remote_logger(ulog_level_t severity, char *msg, const void* args) {
-    Lock lk(logging_mutex);
+    Lock lk(&logging_mutex);
 
     // Packet Header
     log_message_header.protocol_version = 0;
@@ -59,24 +59,15 @@ void remote_logger(ulog_level_t severity, char *msg, const void* args) {
 
 bool startRemoteLogging()
 {
-    if(logging_mutex)
-    {
-        ULOG_WARNING("Remote logging already setup");
+    if(!mutex::initialize(&logging_mutex)) {
         return false;
     }
 
-    logging_mutex = createMutex();
-    if(logging_mutex == nullptr)
-    {
-        ULOG_ERROR("Error setting up remote logging: Error creating mutex");
-        return false;
-    }
-
-    Lock lk(logging_mutex);
-    logging_socket = createSocket(false);
-    if(logging_socket == nullptr)
+    Lock lk(&logging_mutex);
+    if(!sock::initialize(&logging_socket, false))
     {
         ULOG_ERROR("Error setting up remote logging: Error creating socket");
+        return false;
     }
 
     ULOG_SUBSCRIBE(remote_logger, ULOG_INFO_LEVEL);

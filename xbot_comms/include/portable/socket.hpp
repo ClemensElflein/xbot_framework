@@ -7,11 +7,17 @@
 #include <cstdint>
 #include <cstddef>
 
-#include "packet.hpp"
+#include <portable/packet.hpp>
+#include <xbot/socket_impl.hpp>
 
-namespace xbot::comms
+#ifndef XBOT_SOCKET_TYPEDEF
+#error XBOT_SOCKET_TYPEDEF undefined
+#endif
+
+
+namespace xbot::comms::sock
 {
-    typedef void* SocketPtr;
+    typedef XBOT_SOCKET_TYPEDEF* SocketPtr;
 
 
     /**
@@ -19,12 +25,12 @@ namespace xbot::comms
      * @param bind_multicast: true to prepare the socket for listening
      * @return The created socket
      */
-    SocketPtr createSocket(bool bind_multicast);
+    bool initialize(SocketPtr socket, bool bind_multicast);
 
     /**
      * Frees all socket resources
      */
-    void deleteSocket(SocketPtr socket);
+    void deinitialize(SocketPtr socket);
 
     /**
      * Subscribe to a streaming channel.
@@ -45,7 +51,7 @@ namespace xbot::comms
      *
      * @return true, if a packet was received
      */
-    bool receivePacket(SocketPtr socket, PacketPtr* packet);
+    bool receivePacket(SocketPtr socket, packet::PacketPtr* packet);
 
 
     /**
@@ -58,8 +64,8 @@ namespace xbot::comms
      * @param port the port to transmit to
      * @return true on success
      */
-    bool socketTransmitPacket(SocketPtr socket, PacketPtr packet, const char* ip, uint16_t port);
-    bool socketTransmitPacket(SocketPtr socket, PacketPtr packet, uint32_t ip, uint16_t port);
+    bool transmitPacket(SocketPtr socket, packet::PacketPtr packet, const char* ip, uint16_t port);
+    bool transmitPacket(SocketPtr socket, packet::PacketPtr packet, uint32_t ip, uint16_t port);
 
     /**
      * Closes the socket.
@@ -74,7 +80,7 @@ namespace xbot::comms
      * @param port: pointer to the uint16_t where the port will be stored
      * @return true, on success.
      */
-    bool socketGetEndpoint(SocketPtr socket, char* ip, size_t ip_len, uint16_t *port);
+    bool getEndpoint(SocketPtr socket, char* ip, size_t ip_len, uint16_t *port);
 }
 
 #endif //SOCKET_HPP

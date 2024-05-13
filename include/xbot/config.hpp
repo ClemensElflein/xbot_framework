@@ -49,6 +49,10 @@ namespace xbot::config {
     static constexpr uint32_t heartbeat_jitter = 100000;
 
     static_assert(max_log_length > 100);
+
+   namespace service {
+    static constexpr uint32_t io_thread_stack_size = 1024;
+   }
 }
 
 #endif //CONFIG_HPP

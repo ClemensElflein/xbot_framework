@@ -11,10 +11,10 @@ namespace xbot::comms
     class Lock
     {
     public:
-        explicit Lock(MutexPtr mutex);
+        explicit Lock(mutex::MutexPtr mutex);
         ~Lock();
     private:
-        MutexPtr mutex_;
+        mutex::MutexPtr mutex_;
     };
 }
 

@@ -7,7 +7,9 @@
 #include <xbot/config.hpp>
 #include <cstring>
 
-xbot::comms::PacketPtr xbot::comms::allocatePacket()
+using namespace xbot::comms::packet;
+
+PacketPtr xbot::comms::packet::allocatePacket()
 {
     auto buffer = static_cast<Packet*>(malloc(sizeof(Packet)));
 #ifdef DEBUG_MEM
@@ -19,21 +21,29 @@ xbot::comms::PacketPtr xbot::comms::allocatePacket()
     return buffer;
 }
 
-void xbot::comms::freePacket(PacketPtr packet_ptr)
+void xbot::comms::packet::freePacket(PacketPtr packet_ptr)
 {
     free(packet_ptr);
 }
 
-bool xbot::comms::packetAppendData(PacketPtr packet, const void* buffer, size_t size)
+bool xbot::comms::packet::packetAppendData(PacketPtr packet, const void* buffer, size_t size)
 {
-    auto packet_ptr = static_cast<Packet*>(packet);
-
+    if(packet == nullptr)
+        return false;
     // Data won't fit.
-    if(size + packet_ptr->used_data > config::max_packet_size)
+    if(size + packet->used_data > config::max_packet_size)
         return false;
 
-    memcpy(packet_ptr->buffer+packet_ptr->used_data, buffer, size);
-    packet_ptr->used_data+=size;
+    memcpy(packet->buffer+packet->used_data, buffer, size);
+    packet->used_data+=size;
 
+    return true;
+}
+
+bool xbot::comms::packet::packetGetData(PacketPtr packet, void **buffer, size_t *size) {
+    if(packet == nullptr)
+        return false;
+    *buffer = packet->buffer;
+    *size = packet->used_data;
     return true;
 }

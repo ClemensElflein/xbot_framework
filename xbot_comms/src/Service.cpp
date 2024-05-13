@@ -10,35 +10,46 @@
 #include "portable/system.hpp"
 
 uint8_t xbot::comms::Service::sd_buffer[] = {};
-xbot::comms::MutexPtr xbot::comms::Service::sd_buffer_mutex = createMutex();
+XBOT_MUTEX_TYPEDEF xbot::comms::Service::sd_buffer_mutex{};
 
-xbot::comms::Service::Service(uint16_t service_id, uint32_t tick_rate_micros) :
+xbot::comms::Service::Service(uint16_t service_id, uint32_t tick_rate_micros, void* processing_thread_stack, size_t processing_thread_stack_size) :
+    processing_thread_stack_(processing_thread_stack),
+    processing_thread_stack_size_(processing_thread_stack_size),
     tick_rate_micros_(tick_rate_micros),
-    service_id_(service_id),
-    udp_socket_(createSocket(false)),
-    state_mutex_(createMutex()),
-    packet_queue_ptr_(createQueue(10))
+    service_id_(service_id)
 {
     // Set reboot flag
     header_.flags = 1;
+
+    sock::initialize(&udp_socket_, false);
+    mutex::initialize(&state_mutex_);
+    queue::initialize(&packet_queue_, packet_queue_length, packet_queue_buffer, sizeof(packet_queue_buffer));
 }
 
 xbot::comms::Service::~Service()
 {
-    deleteSocket(udp_socket_);
-    deleteMutex(state_mutex_);
-    deleteThread(process_thread_);
+    sock::deinitialize(&udp_socket_);
+    mutex::deinitialize(&state_mutex_);
+    thread::deinitialize(&process_thread_);
 }
 
 bool xbot::comms::Service::start()
 {
     stopped = false;
 
-    process_thread_ = createThread(Service::startProcessingHelper, this);
-    io_thread_ = createThread(Service::startIoHelper, this);
-
-    // Error creating thread
-    return process_thread_ != nullptr;
+    if(!thread::initialize(&process_thread_,Service::startProcessingHelper,this, processing_thread_stack_, processing_thread_stack_size_)) {
+        return false;
+    }
+#ifdef XBOT_ENABLE_STATIC_STACK
+    if(!thread::createThread(&io_thread_,Service::startIoHelper,this, io_thread_stack_, sizeof(io_thread_stack_))) {
+        return false;
+    }
+#else
+    if(!thread::initialize(&io_thread_,Service::startIoHelper,this, nullptr, 0)) {
+        return false;
+    }
+#endif
+    return true;
 }
 
 bool xbot::comms::Service::SendData(uint16_t target_id, const void *data, size_t size) {
@@ -52,10 +63,10 @@ bool xbot::comms::Service::SendData(uint16_t target_id, const void *data, size_t
     header_.arg2 = target_id;
 
     // Send header and data
-    PacketPtr ptr = allocatePacket();
+    packet::PacketPtr ptr = packet::allocatePacket();
     packetAppendData(ptr, &header_, sizeof(header_));
     packetAppendData(ptr, data, size);
-    return socketTransmitPacket(udp_socket_, ptr, target_ip, target_port);
+    return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
 
 bool xbot::comms::Service::SendDataClaimAck() {
@@ -69,24 +80,24 @@ bool xbot::comms::Service::SendDataClaimAck() {
     header_.arg1 = 1;
 
     // Send header and data
-    PacketPtr ptr = allocatePacket();
+    packet::PacketPtr ptr = packet::allocatePacket();
     packetAppendData(ptr, &header_, sizeof(header_));
-    return socketTransmitPacket(udp_socket_, ptr, target_ip, target_port);
+    return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
 
 void xbot::comms::Service::runIo() {
     while(true) {
         // Check, if we should stop
         {
-            Lock lk(state_mutex_);
+            Lock lk(&state_mutex_);
             if (stopped)
             {
                 return;
             }
         }
 
-        PacketPtr packet = nullptr;
-        if(receivePacket(udp_socket_, &packet)) {
+        packet::PacketPtr packet = nullptr;
+        if(sock::receivePacket(&udp_socket_, &packet)) {
             // Got a packet, check if valid and put it into the processing queue.
             if(packet->used_data < sizeof(datatypes::XbotHeader)) {
                 ULOG_ARG_ERROR(&service_id_, "Packet too short to contain header.");
@@ -104,7 +115,7 @@ void xbot::comms::Service::runIo() {
                 continue;
             }
 
-            if(!queuePushItem(packet_queue_ptr_, packet)) {
+            if(!queuePushItem(&packet_queue_, packet)) {
                 ULOG_ARG_ERROR(&service_id_, "Error pushing packet into processing queue.");
                 freePacket(packet);
                 continue;
@@ -124,12 +135,12 @@ void xbot::comms::Service::fillHeader() {
         // Clear reboot flag on rolloger
         header_.flags &= 0xFE;
     }
-    header_.timestamp = getTimeMicros();
+    header_.timestamp = system::getTimeMicros();
 }
 
 void xbot::comms::Service::heartbeat() {
     if(target_ip == 0 || target_port == 0) {
-        last_heartbeat_micros_ = getTimeMicros();
+        last_heartbeat_micros_ = system::getTimeMicros();
         return;
     }
     fillHeader();
@@ -138,24 +149,24 @@ void xbot::comms::Service::heartbeat() {
     header_.arg1 = 0;
 
     // Send header and data
-    PacketPtr ptr = allocatePacket();
+    packet::PacketPtr ptr = packet::allocatePacket();
     packetAppendData(ptr, &header_, sizeof(header_));
-    socketTransmitPacket(udp_socket_, ptr, target_ip, target_port);
-    last_heartbeat_micros_ = getTimeMicros();
+    sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
+    last_heartbeat_micros_ = system::getTimeMicros();
 }
 
 void xbot::comms::Service::runProcessing()
 {
     // Check, if we should stop
     {
-        Lock lk(state_mutex_);
-        last_tick_micros_ = getTimeMicros();
+        Lock lk(&state_mutex_);
+        last_tick_micros_ = system::getTimeMicros();
     }
     while (true)
     {
         // Check, if we should stop
         {
-            Lock lk(state_mutex_);
+            Lock lk(&state_mutex_);
             if (stopped)
             {
                 return;
@@ -163,8 +174,8 @@ void xbot::comms::Service::runProcessing()
         }
 
         // Fetch from queue
-        PacketPtr packet;
-        uint32_t now_micros = getTimeMicros();
+        packet::PacketPtr packet;
+        uint32_t now_micros = system::getTimeMicros();
         // Calculate when the next tick needs to happen (expected tick rate - time elapsed)
         uint32_t time_to_next_tick = tick_rate_micros_-(now_micros - last_tick_micros_);
         uint32_t time_to_next_heartbeat = heartbeat_micros_-(now_micros - last_heartbeat_micros_);
@@ -181,7 +192,7 @@ void xbot::comms::Service::runProcessing()
             time_to_next_heartbeat = 0;
         }
         const uint32_t block_time = std::min(time_to_next_tick, time_to_next_heartbeat);
-        if (queuePopItem(packet_queue_ptr_, reinterpret_cast<void**>(&packet), block_time))
+        if (queuePopItem(&packet_queue_, reinterpret_cast<void**>(&packet), block_time))
         {
             const auto header = reinterpret_cast<datatypes::XbotHeader*>(packet->buffer);
 
@@ -219,7 +230,7 @@ void xbot::comms::Service::runProcessing()
 
             freePacket(packet);
         }
-        uint32_t now = getTimeMicros();
+        uint32_t now = system::getTimeMicros();
         // Measure time required for the tick() call, so that we can substract before next timeout
         if(last_tick_micros_ + tick_rate_micros_ < now) {
             last_tick_micros_ = now;

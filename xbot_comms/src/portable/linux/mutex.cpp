@@ -4,24 +4,24 @@
 #include <portable/mutex.hpp>
 #include <mutex>
 
-xbot::comms::MutexPtr xbot::comms::createMutex()
-{
-    return new std::mutex();
+using namespace xbot::comms::mutex;
+
+bool xbot::comms::mutex::initialize(MutexPtr mutex) {
+    // nothing to initialize
+    return true;
 }
 
-void xbot::comms::deleteMutex(MutexPtr mutex)
+void xbot::comms::mutex::deinitialize(MutexPtr mutex)
 {
-    delete static_cast<std::mutex*>(mutex);
+    // nothing to uninitialize
 }
 
-void xbot::comms::lockMutex(MutexPtr mutex)
+void xbot::comms::mutex::lockMutex(MutexPtr mutex)
 {
-    auto* mutexPtr = static_cast<std::mutex*>(mutex);
-    mutexPtr->lock();
+    mutex->lock();
 }
 
-void xbot::comms::unlockMutex(MutexPtr mutex)
+void xbot::comms::mutex::unlockMutex(MutexPtr mutex)
 {
-    auto* mutexPtr = static_cast<std::mutex*>(mutex);
-    mutexPtr->unlock();
+    mutex->unlock();
 }

@@ -67,7 +67,6 @@ namespace xbot::hub {
         static std::atomic_flag stopped_;
         // track when we last checked for claims and timeouts
         static std::chrono::time_point<std::chrono::steady_clock> last_check_;
-
     };
 }
 

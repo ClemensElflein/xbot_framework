@@ -27,6 +27,7 @@ if (${XBOT_ADD_LINUX_PORTABLE})
             src/portable/linux/queue.cpp
             src/portable/linux/system.cpp
     )
+    target_include_directories(xbot_comms PUBLIC src/portable/linux/include)
 endif ()
 
 target_include_directories(xbot_comms PUBLIC include ${PROJECT_SOURCE_DIR}/../include)
