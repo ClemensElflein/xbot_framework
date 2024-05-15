@@ -37,6 +37,8 @@ namespace xbot::config {
     static_assert(max_sd_entry_size > max_service_name_length);
     static const char *sd_multicast_address = "233.255.255.0";
     static constexpr uint32_t sd_advertisement_interval_micros = 10000000;
+    // the fast sd advertisement time is used as long as the service is not yet claimed.
+    static constexpr uint32_t sd_advertisement_interval_micros_fast = 1000000;
 
 
     /**
@@ -51,7 +53,7 @@ namespace xbot::config {
     static_assert(max_log_length > 100);
 
    namespace service {
-    static constexpr uint32_t io_thread_stack_size = 1024;
+    static constexpr uint32_t io_thread_stack_size = 5000;
    }
 }
 

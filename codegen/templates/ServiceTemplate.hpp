@@ -131,7 +131,7 @@ private:
     uint32_t sd_sequence_ = 0;
     bool reboot = true;
     bool handlePacket(const xbot::comms::datatypes::XbotHeader *header, const void *payload) override final;
-    void advertiseService() override final;
+    bool advertiseService() override final;
 
 
 protected:

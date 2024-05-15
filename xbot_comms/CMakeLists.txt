@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
 # Allow logging using ulog
-add_compile_definitions(ULOG_ENABLED)
+#add_compile_definitions(ULOG_ENABLED)
 
 # Add external dependencies
 add_subdirectory(ext)
@@ -18,8 +18,12 @@ add_library(xbot_comms STATIC
         src/RemoteLogging.cpp
 )
 
-if (${XBOT_ADD_LINUX_PORTABLE})
-    target_sources(xbot_comms
+if(DEFINED XBOT_CUSTOM_PORT_PATH)
+    message("Using custom port at ${XBOT_CUSTOM_PORT_PATH}")
+    target_include_directories(xbot_comms PUBLIC ${XBOT_CUSTOM_PORT_PATH}/include)
+
+else ()
+    target_sources(xbot_comms PRIVATE
             src/portable/linux/mutex.cpp
             src/portable/linux/thread.cpp
             src/portable/linux/socket.cpp
@@ -30,8 +34,9 @@ if (${XBOT_ADD_LINUX_PORTABLE})
     target_include_directories(xbot_comms PUBLIC src/portable/linux/include)
 endif ()
 
+
 target_include_directories(xbot_comms PUBLIC include ${PROJECT_SOURCE_DIR}/../include)
 target_link_libraries(xbot_comms PUBLIC ulog etl)
 #set_property(TARGET xbot_comms PROPERTY CXX_STANDARD 23)
 
-add_subdirectory(test)
+#add_subdirectory(test)

@@ -62,12 +62,12 @@ bool ServiceTemplateBase::handlePacket(const xbot::comms::datatypes::XbotHeader 
     return false;
 }
 /*[[[cog
-cog.outl(f"void {service['class_name']}::advertiseService() {{")
+cog.outl(f"bool {service['class_name']}::advertiseService() {{")
 ]]]*/
-void ServiceTemplateBase::advertiseService() {
+bool ServiceTemplateBase::advertiseService() {
 //[[[end]]]
     static_assert(sizeof(sd_buffer)>80+sizeof(SERVICE_DESCRIPTION_CBOR), "sd_buffer too small for service description. increase size");
-    xbot::comms::Lock lk{&sd_buffer_mutex};
+
     size_t index = 0;
     // Build CBOR payload
     // 0xA4 = object with 4 entries
@@ -84,7 +84,8 @@ void ServiceTemplateBase::advertiseService() {
     uint8_t id[16];
     if(!xbot::comms::system::getNodeId(id, 16)) {
         ULOG_ARG_ERROR(&service_id_, "Error fetching node ID");
-        return;
+
+        return false;
     }
     for(size_t i = 0; i < sizeof(id); i+=4) {
         // 0x1A == 32 bit unsigned, positive
@@ -126,13 +127,13 @@ void ServiceTemplateBase::advertiseService() {
 
     if(!xbot::comms::sock::getEndpoint(&udp_socket_, address, sizeof(address), &port)) {
         ULOG_ARG_ERROR(&service_id_, "Error fetching socket address");
-        return;
+        return false;
     }
 
     size_t len = strlen(address);
     if(len >= 16) {
         ULOG_ARG_ERROR(&service_id_, "Got invalid address");
-        return;
+        return false;
     }
     // Object with 2 entries (ip, port)
     sd_buffer[index++] = 0xA2;
@@ -185,9 +186,9 @@ void ServiceTemplateBase::advertiseService() {
     }
 
     xbot::comms::packet::PacketPtr ptr = xbot::comms::packet::allocatePacket();
-    packetAppendData(ptr, &header, sizeof(header));
-    packetAppendData(ptr, sd_buffer, header.payload_size);
-    xbot::comms::sock::transmitPacket(&udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
+    xbot::comms::packet::packetAppendData(ptr, &header, sizeof(header));
+    xbot::comms::packet::packetAppendData(ptr, sd_buffer, header.payload_size);
+    return xbot::comms::sock::transmitPacket(&udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
 }
 
 /*[[[cog

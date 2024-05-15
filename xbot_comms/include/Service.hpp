@@ -39,9 +39,8 @@ namespace xbot::comms {
          * @param service Pointer to the service to start
          * @return null
          */
-        static void *startProcessingHelper(void *service) {
+        static void startProcessingHelper(void *service) {
             static_cast<Service *>(service)->runProcessing();
-            return nullptr;
         }
 
         /**
@@ -49,15 +48,13 @@ namespace xbot::comms {
          * @param service Pointer to the service to start
          * @return null
          */
-        static void *startIoHelper(void *service) {
+        static void startIoHelper(void *service) {
             static_cast<Service *>(service)->runIo();
-            return nullptr;
         }
 
     protected:
         // Buffer to prepare service advertisements, static to allow reuse between services.
-        static uint8_t sd_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)];
-        static XBOT_MUTEX_TYPEDEF sd_buffer_mutex;
+        uint8_t sd_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)]{};
 
         // Scratch space for the header. This will only ever be accessed in the process_thread, so we don't need a mutex
         // Don't make it static, so that multiple services can build packets in parallel (it will happen often)
@@ -115,7 +112,7 @@ namespace xbot::comms {
 
         bool SendDataClaimAck();
 
-        virtual void advertiseService() = 0;
+        virtual bool advertiseService() = 0;
 
         virtual void tick() = 0;
 
