@@ -20,8 +20,9 @@ add_library(xbot_comms STATIC
 
 if(DEFINED XBOT_CUSTOM_PORT_PATH)
     message("Using custom port at ${XBOT_CUSTOM_PORT_PATH}")
+    file(GLOB_RECURSE PORT_SOURCES ${XBOT_CUSTOM_PORT_PATH}/*.c ${XBOT_CUSTOM_PORT_PATH}/*.cpp ${XBOT_CUSTOM_PORT_PATH}/**/*.c ${XBOT_CUSTOM_PORT_PATH}/**/*.cpp )
     target_include_directories(xbot_comms PUBLIC ${XBOT_CUSTOM_PORT_PATH}/include)
-
+    target_sources(xbot_comms PRIVATE ${PORT_SOURCES})
 else ()
     target_sources(xbot_comms PRIVATE
             src/portable/linux/mutex.cpp

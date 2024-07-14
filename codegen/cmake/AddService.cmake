@@ -7,12 +7,12 @@ function(add_service SERVICE_NAME JSON_FILE)
             COMMENT "Generating code for service ${SERVICE_NAME}."
     )
 
-    add_library(${SERVICE_NAME}Base
+    add_library(${SERVICE_NAME} OBJECT EXCLUDE_FROM_ALL
             ${CMAKE_CURRENT_BINARY_DIR}/generated/${SERVICE_NAME}Base.cpp
             ${CMAKE_CURRENT_BINARY_DIR}/generated/include/${SERVICE_NAME}Base.hpp
     )
 
-    target_include_directories(${SERVICE_NAME}Base PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
-    target_link_libraries(${SERVICE_NAME}Base PUBLIC xbot_comms)
+    target_include_directories(${SERVICE_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
+    target_link_libraries(${SERVICE_NAME} PUBLIC xbot_comms)
 endfunction()
 

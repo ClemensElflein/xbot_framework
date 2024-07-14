@@ -5,9 +5,11 @@ add_subdirectory(codegen)
 add_subdirectory(xbot_comms)
 
 if (${XBOT_BUILD_APPS})
+    message("Building Apps")
     add_subdirectory(tools/xbot_control_hub)
 endif ()
 
 if (${XBOT_BUILD_EXAMPLES})
+    message("Building Examples")
     add_subdirectory(example)
 endif ()

@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.25)
 project(codegen C CXX)
 
-# Find Pyhton 3 and create venv
+# Find Python 3 and create venv
 find_package (Python3 COMPONENTS Interpreter REQUIRED)
-execute_process (COMMAND "${Python3_EXECUTABLE}" -m venv "${PROJECT_BINARY_DIR}/.venv")
+execute_process (COMMAND "${Python3_EXECUTABLE}" -m venv  --system-site-packages "${PROJECT_BINARY_DIR}/.venv")
 
 # Set the virtual environment, tell CMake to look there for python and search again
 set (ENV{VIRTUAL_ENV} "${PROJECT_BINARY_DIR}/.venv")
