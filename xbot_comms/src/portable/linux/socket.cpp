@@ -84,8 +84,8 @@ bool xbot::comms::sock::initialize(SocketPtr socket_ptr, bool bind_multicast) {
   // Set receive timeout
   {
     timeval opt{};
-    opt.tv_sec = 0;
-    opt.tv_usec = 1000;
+    opt.tv_sec = 1;
+    opt.tv_usec = 0;
     if (setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &opt, sizeof(opt)) < 0) {
       close(fd);
       return false;
@@ -156,15 +156,6 @@ bool xbot::comms::sock::receivePacket(SocketPtr socket, PacketPtr* packet) {
   const PacketPtr pkt = allocatePacket();
   sockaddr_in fromAddr{};
   socklen_t fromLen = sizeof(fromAddr);
-
-  // Check, if data is available
-  int count = 0;
-  ioctl(*socket, FIONREAD, &count);
-  // No data available, go next.
-  if (count <= 0) {
-    return false;
-  }
-
   const ssize_t recvLen =
       recvfrom(*socket, pkt->buffer, config::max_packet_size, 0,
                reinterpret_cast<struct sockaddr*>(&fromAddr), &fromLen);

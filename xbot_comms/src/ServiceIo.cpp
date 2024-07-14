@@ -41,5 +41,6 @@ bool ServiceIo::ioInput(packet::PacketPtr packet) {
     packet::freePacket(packet);
     return false;
   }
+  return true;
 }
 }  // namespace xbot::comms
