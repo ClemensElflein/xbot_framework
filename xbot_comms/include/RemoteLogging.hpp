@@ -7,4 +7,4 @@
 
 bool startRemoteLogging();
 
-#endif //REMOTELOGGING_HPP
+#endif  // REMOTELOGGING_HPP

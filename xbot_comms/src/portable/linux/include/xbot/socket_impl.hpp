@@ -7,5 +7,4 @@
 
 #define XBOT_SOCKET_TYPEDEF int
 
-
-#endif //SOCKET_IMPL_HPP
+#endif  // SOCKET_IMPL_HPP

@@ -6,8 +6,8 @@
 #define SYSTEM_HPP
 
 namespace xbot::comms::system {
-    void initSystem(uint32_t node_id = 0);
-    uint32_t getTimeMicros();
-    bool getNodeId(uint8_t *id, size_t id_len);
-}
-#endif //SYSTEM_HPP
+void initSystem(uint32_t node_id = 0);
+uint32_t getTimeMicros();
+bool getNodeId(uint8_t *id, size_t id_len);
+}  // namespace xbot::comms::system
+#endif  // SYSTEM_HPP

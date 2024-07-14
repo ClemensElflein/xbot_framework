@@ -9,45 +9,43 @@
 
 namespace xbot::comms::queue {
 // Simple blocking queue implementation
-class BlockingQueue
-{
-public:
-    BlockingQueue() = default;
+class BlockingQueue {
+ public:
+  BlockingQueue() = default;
 
-    bool init(size_t size, void* buffer, size_t buffer_size);
+  bool init(size_t size, void* buffer, size_t buffer_size);
 
-    ~BlockingQueue();
+  ~BlockingQueue();
 
-    bool push(void* ptr, uint32_t timeout_micros);
+  bool push(void* ptr, uint32_t timeout_micros);
 
-    void* pop(uint32_t timeout_micros);
+  void* pop(uint32_t timeout_micros);
 
+ private:
+  // Queue data buffer. It is an array of queue_length pointers.
+  // The front_ points to the first item on the queue, the item_count_ member
+  // keeps track of the valid items in the queue. We can easily insert into the
+  // queue by pushing to the back (front_idx_ + item_count_) % queue_size_. We
+  // can easily read from the queue by reading the front_ pointer, if
+  // item_count_ > 0.
 
+  void** buffer_ = nullptr;
+  size_t front_idx_ = 0;
+  size_t queue_size_ = 0;
+  size_t item_count_ = 0;
 
-private:
-    // Queue data buffer. It is an array of queue_length pointers.
-    // The front_ points to the first item on the queue, the item_count_ member keeps track of the valid
-    // items in the queue.
-    // We can easily insert into the queue by pushing to the back (front_idx_ + item_count_) % queue_size_.
-    // We can easily read from the queue by reading the front_ pointer, if item_count_ > 0.
+  // Helpers
+  bool isEmpty() const;
+  bool isFull() const;
 
-    void** buffer_ = nullptr;
-    size_t front_idx_ = 0;
-    size_t queue_size_ = 0;
-    size_t item_count_ = 0;
-
-    // Helpers
-    bool isEmpty() const;
-    bool isFull() const;
-
-    mutable std::mutex mutex_{};
-    // Condition variables for push and pop events
-    std::condition_variable cv_push_{};
-    std::condition_variable cv_pop_{};
+  mutable std::mutex mutex_{};
+  // Condition variables for push and pop events
+  std::condition_variable cv_push_{};
+  std::condition_variable cv_pop_{};
 };
 
-}
+}  // namespace xbot::comms::queue
 
 #define XBOT_QUEUE_TYPEDEF xbot::comms::queue::BlockingQueue
 
-#endif //QUEUE_IMPL_HPP
+#endif  // QUEUE_IMPL_HPP

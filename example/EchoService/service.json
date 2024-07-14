@@ -1,6 +1,4 @@
 {
-  "type": "EchoService",
-  "version": 1,
   "inputs": [
     {
       "id": 0,
@@ -36,5 +34,7 @@
       "name": "EchoCount",
       "type": "uint32_t"
     }
-  ]
+  ],
+  "type": "EchoService",
+  "version": 1
 }

@@ -9,5 +9,4 @@
 
 #define XBOT_THREAD_TYPEDEF pthread_t
 
-
-#endif //THREAD_IMPL_HPP
+#endif  // THREAD_IMPL_HPP

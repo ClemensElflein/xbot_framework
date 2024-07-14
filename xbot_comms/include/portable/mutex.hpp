@@ -11,15 +11,13 @@
 #error XBOT_MUTEX_TYPEDEF undefined
 #endif
 
+namespace xbot::comms::mutex {
+typedef XBOT_MUTEX_TYPEDEF* MutexPtr;
 
-namespace xbot::comms::mutex
-{
-    typedef XBOT_MUTEX_TYPEDEF* MutexPtr;
+bool initialize(MutexPtr mutex);
+void deinitialize(MutexPtr mutex);
+void lockMutex(MutexPtr mutex);
+void unlockMutex(MutexPtr mutex);
+}  // namespace xbot::comms::mutex
 
-    bool initialize(MutexPtr mutex);
-    void deinitialize(MutexPtr mutex);
-    void lockMutex(MutexPtr mutex);
-    void unlockMutex(MutexPtr mutex);
-}
-
-#endif //MUTEX_HPP
+#endif  // MUTEX_HPP

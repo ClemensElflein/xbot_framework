@@ -5,4 +5,4 @@
 #ifndef SYSTEM_IMPL_HPP
 #define SYSTEM_IMPL_HPP
 
-#endif //SYSTEM_IMPL_HPP
+#endif  // SYSTEM_IMPL_HPP

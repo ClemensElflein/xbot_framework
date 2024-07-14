@@ -10,34 +10,33 @@
 #error XBOT_PACKET_TYPEDEF undefined
 #endif
 
-namespace xbot::comms::packet
-{
+namespace xbot::comms::packet {
 
+typedef XBOT_PACKET_TYPEDEF* PacketPtr;
 
-    typedef XBOT_PACKET_TYPEDEF* PacketPtr;
+/**
+ * @brief Allocate a packet.
+ *
+ * @return PacketPtr A pointer to the allocated packet.
+ *
+ * Allocates a packet and returns a pointer to it. This will block until a
+ * packet is available.
+ */
+PacketPtr allocatePacket();
 
-    /**
-     * @brief Allocate a packet.
-     *
-     * @return PacketPtr A pointer to the allocated packet.
-     *
-     * Allocates a packet and returns a pointer to it. This will block until a packet is available.
-     */
-    PacketPtr allocatePacket();
+/**
+ * @brief Free the memory used by a packet.
+ *
+ * This function frees the memory allocated for a packet.
+ *
+ * @param packet_ptr A pointer to the packet to be freed.
+ */
+void freePacket(PacketPtr packet_ptr);
 
-    /**
-     * @brief Free the memory used by a packet.
-     *
-     * This function frees the memory allocated for a packet.
-     *
-     * @param packet_ptr A pointer to the packet to be freed.
-     */
-    void freePacket(PacketPtr packet_ptr);
+bool packetAppendData(PacketPtr packet, const void* buffer, size_t size);
 
-    bool packetAppendData(PacketPtr packet, const void* buffer, size_t size);
+bool packetGetData(PacketPtr packet, void** buffer, size_t* size);
 
-    bool packetGetData(PacketPtr packet, void** buffer, size_t *size);
+}  // namespace xbot::comms::packet
 
-}
-
-#endif //PACKET_HPP
+#endif  // PACKET_HPP

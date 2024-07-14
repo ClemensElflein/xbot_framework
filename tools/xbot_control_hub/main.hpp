@@ -7,4 +7,4 @@
 
 int main(int argc, char* argv[]);
 
-#endif //MAIN_HPP
+#endif  // MAIN_HPP

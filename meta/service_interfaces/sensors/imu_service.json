@@ -1,6 +1,5 @@
 {
-  "type": "IMU",
-  "inputs": [ ],
+  "inputs": [],
   "outputs": [
     {
       "id": 0,
@@ -24,5 +23,6 @@
       "name": "Available Channels",
       "type": "uint16_t"
     }
-  ]
+  ],
+  "type": "IMU"
 }

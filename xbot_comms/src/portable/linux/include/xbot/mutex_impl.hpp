@@ -9,5 +9,4 @@
 
 #define XBOT_MUTEX_TYPEDEF std::mutex
 
-
-#endif //MUTEX_IMPL_HPP
+#endif  // MUTEX_IMPL_HPP

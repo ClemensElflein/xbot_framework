@@ -6,16 +6,15 @@
 #define LOCK_HPP
 #include "portable/mutex.hpp"
 
-namespace xbot::comms
-{
-    class Lock
-    {
-    public:
-        explicit Lock(mutex::MutexPtr mutex);
-        ~Lock();
-    private:
-        mutex::MutexPtr mutex_;
-    };
-}
+namespace xbot::comms {
+class Lock {
+ public:
+  explicit Lock(mutex::MutexPtr mutex);
+  ~Lock();
 
-#endif //LOCK_HPP
+ private:
+  mutex::MutexPtr mutex_;
+};
+}  // namespace xbot::comms
+
+#endif  // LOCK_HPP

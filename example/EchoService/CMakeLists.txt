@@ -11,4 +11,3 @@ add_executable(EchoService main.cpp EchoService.cpp EchoService.hpp)
 
 # Link the generated interface
 target_link_libraries(EchoService EchoServiceBase)
-
