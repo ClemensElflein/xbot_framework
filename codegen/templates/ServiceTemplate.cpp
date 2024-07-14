@@ -13,210 +13,200 @@ cog.outl(f'#include "{service["class_name"]}.hpp"')
 ]]]*/
 #include "ServiceTemplateBase.hpp"
 //[[[end]]]
-#include <ulog.h>
-
 #include <cstring>
-
+#include <ulog.h>
 #include "Lock.hpp"
 #include "portable/system.hpp"
 
 /*[[[cog
-cog.outl(f"bool {service['class_name']}::handlePacket(const
-xbot::comms::datatypes::XbotHeader *header, const void *payload) {{")
+cog.outl(f"bool {service['class_name']}::handlePacket(const xbot::comms::datatypes::XbotHeader *header, const void *payload) {{")
 ]]]*/
-bool ServiceTemplateBase::handlePacket(
-    const xbot::comms::datatypes::XbotHeader *header, const void *payload) {
-  //[[[end]]]
-  if (header->message_type == xbot::comms::datatypes::MessageType::DATA) {
-    // Call the callback for this input
-    switch (header->arg2) {
-      /*[[[cog
-      for i in service['inputs']:
-          cog.outl(f"case {i['id']}:");
-          if i['is_array']:
-              cog.outl(f"if(header->payload_size % sizeof({i['type']}) != 0)
-      {{"); cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data
-      size\");"); cog.outl("    return false;"); cog.outl("}");
-              cog.outl(f"return {i['callback_name']}(static_cast<const
-      {i['type']}*>(payload), header->payload_size/sizeof({i['type']}));");
-          else:
-              cog.outl(f"if(header->payload_size != sizeof({i['type']})) {{");
-              cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data
-      size\");"); cog.outl("    return false;"); cog.outl("}");
-              cog.outl(f"return {i['callback_name']}(*static_cast<const
-      {i['type']}*>(payload));");
-      ]]]*/
-      case 0:
-        if (header->payload_size % sizeof(char) != 0) {
-          ULOG_ARG_ERROR(&service_id_, "Invalid data size");
-          return false;
+bool ServiceTemplateBase::handlePacket(const xbot::comms::datatypes::XbotHeader *header, const void *payload) {
+//[[[end]]]
+    if (header->message_type == xbot::comms::datatypes::MessageType::DATA) {
+        // Call the callback for this input
+        switch (header->arg2) {
+            /*[[[cog
+            for i in service['inputs']:
+                cog.outl(f"case {i['id']}:");
+                if i['is_array']:
+                    cog.outl(f"if(header->payload_size % sizeof({i['type']}) != 0) {{");
+                    cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data size\");");
+                    cog.outl("    return false;");
+                    cog.outl("}");
+                    cog.outl(f"return {i['callback_name']}(static_cast<const {i['type']}*>(payload), header->payload_size/sizeof({i['type']}));");
+                else:
+                    cog.outl(f"if(header->payload_size != sizeof({i['type']})) {{");
+                    cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data size\");");
+                    cog.outl("    return false;");
+                    cog.outl("}");
+                    cog.outl(f"return {i['callback_name']}(*static_cast<const {i['type']}*>(payload));");
+            ]]]*/
+            case 0:
+            if(header->payload_size % sizeof(char) != 0) {
+                ULOG_ARG_ERROR(&service_id_, "Invalid data size");
+                return false;
+            }
+            return OnExampleInput1Changed(static_cast<const char*>(payload), header->payload_size/sizeof(char));
+            case 1:
+            if(header->payload_size != sizeof(uint32_t)) {
+                ULOG_ARG_ERROR(&service_id_, "Invalid data size");
+                return false;
+            }
+            return OnExampleInput2Changed(*static_cast<const uint32_t*>(payload));
+            //[[[end]]]
+            default:
+                return false;
         }
-        return OnExampleInput1Changed(static_cast<const char *>(payload),
-                                      header->payload_size / sizeof(char));
-      case 1:
-        if (header->payload_size != sizeof(uint32_t)) {
-          ULOG_ARG_ERROR(&service_id_, "Invalid data size");
-          return false;
-        }
-        return OnExampleInput2Changed(*static_cast<const uint32_t *>(payload));
-      //[[[end]]]
-      default:
-        return false;
     }
-  }
-  return false;
+    return false;
 }
 /*[[[cog
 cog.outl(f"bool {service['class_name']}::advertiseService() {{")
 ]]]*/
 bool ServiceTemplateBase::advertiseService() {
-  //[[[end]]]
-  static_assert(sizeof(sd_buffer) > 80 + sizeof(SERVICE_DESCRIPTION_CBOR),
-                "sd_buffer too small for service description. increase size");
+//[[[end]]]
+    static_assert(sizeof(sd_buffer)>80+sizeof(SERVICE_DESCRIPTION_CBOR), "sd_buffer too small for service description. increase size");
 
-  size_t index = 0;
-  // Build CBOR payload
-  // 0xA4 = object with 4 entries
-  sd_buffer[index++] = 0xA4;
-  // Key1
-  // 0x62 = text(3)
-  sd_buffer[index++] = 0x63;
-  sd_buffer[index++] = 'n';
-  sd_buffer[index++] = 'i';
-  sd_buffer[index++] = 'd';
-  // 0x84 = array with 4 entries (4x32 = 128 bit; our ID length)
-  sd_buffer[index++] = 0x84;
+    size_t index = 0;
+    // Build CBOR payload
+    // 0xA4 = object with 4 entries
+    sd_buffer[index++] = 0xA4;
+    // Key1
+    // 0x62 = text(3)
+    sd_buffer[index++] = 0x63;
+    sd_buffer[index++] = 'n';
+    sd_buffer[index++] = 'i';
+    sd_buffer[index++] = 'd';
+    // 0x84 = array with 4 entries (4x32 = 128 bit; our ID length)
+    sd_buffer[index++] = 0x84;
 
-  uint8_t id[16];
-  if (!xbot::comms::system::getNodeId(id, 16)) {
-    ULOG_ARG_ERROR(&service_id_, "Error fetching node ID");
+    uint8_t id[16];
+    if(!xbot::comms::system::getNodeId(id, 16)) {
+        ULOG_ARG_ERROR(&service_id_, "Error fetching node ID");
 
-    return false;
-  }
-  for (size_t i = 0; i < sizeof(id); i += 4) {
-    // 0x1A == 32 bit unsigned, positive
-    sd_buffer[index++] = 0x1A;
-    sd_buffer[index++] = id[i + 0];
-    sd_buffer[index++] = id[i + 1];
-    sd_buffer[index++] = id[i + 2];
-    sd_buffer[index++] = id[i + 3];
-  }
+        return false;
+    }
+    for(size_t i = 0; i < sizeof(id); i+=4) {
+        // 0x1A == 32 bit unsigned, positive
+        sd_buffer[index++] = 0x1A;
+        sd_buffer[index++] = id[i+0];
+        sd_buffer[index++] = id[i+1];
+        sd_buffer[index++] = id[i+2];
+        sd_buffer[index++] = id[i+3];
+    }
 
-  // Key2
-  // 0x62 = text(3)
-  sd_buffer[index++] = 0x63;
-  sd_buffer[index++] = 's';
-  sd_buffer[index++] = 'i';
-  sd_buffer[index++] = 'd';
+    // Key2
+    // 0x62 = text(3)
+    sd_buffer[index++] = 0x63;
+    sd_buffer[index++] = 's';
+    sd_buffer[index++] = 'i';
+    sd_buffer[index++] = 'd';
 
-  // 0x19 == 16 bit unsigned, positive
-  sd_buffer[index++] = 0x19;
-  sd_buffer[index++] = (service_id_ >> 8) & 0xFF;
-  sd_buffer[index++] = service_id_ & 0xFF;
+    // 0x19 == 16 bit unsigned, positive
+    sd_buffer[index++] = 0x19;
+    sd_buffer[index++] = (service_id_>>8) & 0xFF;
+    sd_buffer[index++] = service_id_ & 0xFF;
 
-  // Key2
-  // 0x68 = text(8)
-  sd_buffer[index++] = 0x68;
-  sd_buffer[index++] = 'e';
-  sd_buffer[index++] = 'n';
-  sd_buffer[index++] = 'd';
-  sd_buffer[index++] = 'p';
-  sd_buffer[index++] = 'o';
-  sd_buffer[index++] = 'i';
-  sd_buffer[index++] = 'n';
-  sd_buffer[index++] = 't';
 
-  // Get the IP address
-  char address[16]{};
-  uint16_t port = 0;
+    // Key2
+    // 0x68 = text(8)
+    sd_buffer[index++] = 0x68;
+    sd_buffer[index++] = 'e';
+    sd_buffer[index++] = 'n';
+    sd_buffer[index++] = 'd';
+    sd_buffer[index++] = 'p';
+    sd_buffer[index++] = 'o';
+    sd_buffer[index++] = 'i';
+    sd_buffer[index++] = 'n';
+    sd_buffer[index++] = 't';
 
-  if (!xbot::comms::sock::getEndpoint(&udp_socket_, address, sizeof(address),
-                                      &port)) {
-    ULOG_ARG_ERROR(&service_id_, "Error fetching socket address");
-    return false;
-  }
+    // Get the IP address
+    char address[16]{};
+    uint16_t port = 0;
 
-  size_t len = strlen(address);
-  if (len >= 16) {
-    ULOG_ARG_ERROR(&service_id_, "Got invalid address");
-    return false;
-  }
-  // Object with 2 entries (ip, port)
-  sd_buffer[index++] = 0xA2;
-  // text(2) = "ip"
-  sd_buffer[index++] = 0x62;
-  sd_buffer[index++] = 'i';
-  sd_buffer[index++] = 'p';
-  sd_buffer[index++] = 0x60 + len;
-  strncpy(reinterpret_cast<char *>(sd_buffer + index), address, len);
-  index += len;
-  sd_buffer[index++] = 0x64;
-  sd_buffer[index++] = 'p';
-  sd_buffer[index++] = 'o';
-  sd_buffer[index++] = 'r';
-  sd_buffer[index++] = 't';
-  // 0x19 == 16 bit unsigned, positive
-  sd_buffer[index++] = 0x19;
-  sd_buffer[index++] = (port >> 8) & 0xFF;
-  sd_buffer[index++] = port & 0xFF;
+    if(!xbot::comms::sock::getEndpoint(&udp_socket_, address, sizeof(address), &port)) {
+        ULOG_ARG_ERROR(&service_id_, "Error fetching socket address");
+        return false;
+    }
 
-  // Key3
-  // 0x64 = text(4)
-  sd_buffer[index++] = 0x64;
-  sd_buffer[index++] = 'd';
-  sd_buffer[index++] = 'e';
-  sd_buffer[index++] = 's';
-  sd_buffer[index++] = 'c';
+    size_t len = strlen(address);
+    if(len >= 16) {
+        ULOG_ARG_ERROR(&service_id_, "Got invalid address");
+        return false;
+    }
+    // Object with 2 entries (ip, port)
+    sd_buffer[index++] = 0xA2;
+    // text(2) = "ip"
+    sd_buffer[index++] = 0x62;
+    sd_buffer[index++] = 'i';
+    sd_buffer[index++] = 'p';
+    sd_buffer[index++] = 0x60 + len;
+    strncpy(reinterpret_cast<char*>(sd_buffer+index), address, len);
+    index += len;
+    sd_buffer[index++] = 0x64;
+    sd_buffer[index++] = 'p';
+    sd_buffer[index++] = 'o';
+    sd_buffer[index++] = 'r';
+    sd_buffer[index++] = 't';
+    // 0x19 == 16 bit unsigned, positive
+    sd_buffer[index++] = 0x19;
+    sd_buffer[index++] = (port>>8) & 0xFF;
+    sd_buffer[index++] = port & 0xFF;
 
-  memcpy(sd_buffer + index, SERVICE_DESCRIPTION_CBOR,
-         sizeof(SERVICE_DESCRIPTION_CBOR));
-  index += sizeof(SERVICE_DESCRIPTION_CBOR);
+    // Key3
+    // 0x64 = text(4)
+    sd_buffer[index++] = 0x64;
+    sd_buffer[index++] = 'd';
+    sd_buffer[index++] = 'e';
+    sd_buffer[index++] = 's';
+    sd_buffer[index++] = 'c';
 
-  xbot::comms::datatypes::XbotHeader header{};
-  if (reboot) {
-    header.flags = 1;
-  } else {
-    header.flags = 0;
-  }
-  header.message_type =
-      xbot::comms::datatypes::MessageType::SERVICE_ADVERTISEMENT;
-  header.payload_size = index;
-  header.protocol_version = 1;
-  header.arg1 = 0;
-  header.arg2 = 0;
-  header.sequence_no = sd_sequence_++;
-  header.timestamp = xbot::comms::system::getTimeMicros();
+    memcpy(sd_buffer+index, SERVICE_DESCRIPTION_CBOR, sizeof(SERVICE_DESCRIPTION_CBOR));
+    index+=sizeof(SERVICE_DESCRIPTION_CBOR);
 
-  // Reset reboot on rollover
-  if (sd_sequence_ == 0) {
-    reboot = false;
-  }
 
-  xbot::comms::packet::PacketPtr ptr = xbot::comms::packet::allocatePacket();
-  xbot::comms::packet::packetAppendData(ptr, &header, sizeof(header));
-  xbot::comms::packet::packetAppendData(ptr, sd_buffer, header.payload_size);
-  return xbot::comms::sock::transmitPacket(&udp_socket_, ptr,
-                                           xbot::config::sd_multicast_address,
-                                           xbot::config::multicast_port);
+    xbot::comms::datatypes::XbotHeader header{};
+    if(reboot) {
+        header.flags = 1;
+    } else {
+        header.flags = 0;
+    }
+    header.message_type = xbot::comms::datatypes::MessageType::SERVICE_ADVERTISEMENT;
+    header.payload_size = index;
+    header.protocol_version = 1;
+    header.arg1 = 0;
+    header.arg2 = 0;
+    header.sequence_no = sd_sequence_++;
+    header.timestamp = xbot::comms::system::getTimeMicros();
+
+    // Reset reboot on rollover
+    if(sd_sequence_==0) {
+        reboot = false;
+    }
+
+    xbot::comms::packet::PacketPtr ptr = xbot::comms::packet::allocatePacket();
+    xbot::comms::packet::packetAppendData(ptr, &header, sizeof(header));
+    xbot::comms::packet::packetAppendData(ptr, sd_buffer, header.payload_size);
+    return xbot::comms::sock::transmitPacket(&udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
 }
 
 /*[[[cog
 # Generate send function implementations.
 for output in service["outputs"]:
     if output['is_array']:
-        cog.outl(f"bool {service['class_name']}::{output['method_name']}(const
-{output['type']}* data, uint32_t length) {{") cog.outl(f"    return
-SendData({output['id']}, data, length*sizeof({output['type']}));") cog.outl("}")
+        cog.outl(f"bool {service['class_name']}::{output['method_name']}(const {output['type']}* data, uint32_t length) {{")
+        cog.outl(f"    return SendData({output['id']}, data, length*sizeof({output['type']}));")
+        cog.outl("}")
     else:
-        cog.outl(f"bool {service['class_name']}::{output['method_name']}(const
-{output['type']} &data) {{") cog.outl(f"    return SendData({output['id']},
-&data, sizeof({output['type']}));") cog.outl("}")
+        cog.outl(f"bool {service['class_name']}::{output['method_name']}(const {output['type']} &data) {{")
+        cog.outl(f"    return SendData({output['id']}, &data, sizeof({output['type']}));")
+        cog.outl("}")
 ]]]*/
-bool ServiceTemplateBase::SendExampleOutput1(const char *data,
-                                             uint32_t length) {
-  return SendData(0, data, length * sizeof(char));
+bool ServiceTemplateBase::SendExampleOutput1(const char* data, uint32_t length) {
+    return SendData(0, data, length*sizeof(char));
 }
 bool ServiceTemplateBase::SendExampleOutput2(const uint32_t &data) {
-  return SendData(1, &data, sizeof(uint32_t));
+    return SendData(1, &data, sizeof(uint32_t));
 }
 //[[[end]]]
