@@ -16,24 +16,18 @@ add_library(xbot_comms STATIC
         src/Service.cpp
         src/Lock.cpp
         src/RemoteLogging.cpp
+        src/ServiceIo.cpp
 )
 
-if(DEFINED XBOT_CUSTOM_PORT_PATH)
-    message("Using custom port at ${XBOT_CUSTOM_PORT_PATH}")
-    file(GLOB_RECURSE PORT_SOURCES ${XBOT_CUSTOM_PORT_PATH}/*.c ${XBOT_CUSTOM_PORT_PATH}/*.cpp ${XBOT_CUSTOM_PORT_PATH}/**/*.c ${XBOT_CUSTOM_PORT_PATH}/**/*.cpp )
-    target_include_directories(xbot_comms PUBLIC ${XBOT_CUSTOM_PORT_PATH}/include)
-    target_sources(xbot_comms PRIVATE ${PORT_SOURCES})
+if (NOT DEFINED XBOT_CUSTOM_PORT_PATH)
+    SET(XBOT_CUSTOM_PORT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/portable/linux)
 else ()
-    target_sources(xbot_comms PRIVATE
-            src/portable/linux/mutex.cpp
-            src/portable/linux/thread.cpp
-            src/portable/linux/socket.cpp
-            src/portable/linux/packet.cpp
-            src/portable/linux/queue.cpp
-            src/portable/linux/system.cpp
-    )
-    target_include_directories(xbot_comms PUBLIC src/portable/linux/include)
+    message("Using custom port at ${XBOT_CUSTOM_PORT_PATH}")
 endif ()
+
+file(GLOB_RECURSE PORT_SOURCES ${XBOT_CUSTOM_PORT_PATH}/*.c ${XBOT_CUSTOM_PORT_PATH}/*.cpp ${XBOT_CUSTOM_PORT_PATH}/**/*.c ${XBOT_CUSTOM_PORT_PATH}/**/*.cpp)
+target_include_directories(xbot_comms PUBLIC ${XBOT_CUSTOM_PORT_PATH}/include)
+target_sources(xbot_comms PRIVATE ${PORT_SOURCES})
 
 
 target_include_directories(xbot_comms PUBLIC include ${PROJECT_SOURCE_DIR}/../include)

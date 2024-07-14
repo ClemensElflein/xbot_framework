@@ -5,16 +5,16 @@
 #ifndef SERVICE_HPP
 #define SERVICE_HPP
 
+#include <ServiceIo.h>
+
 #include <xbot/config.hpp>
 
-#include "portable/mutex.hpp"
 #include "portable/queue.hpp"
-#include "portable/socket.hpp"
 #include "portable/thread.hpp"
 #include "xbot/datatypes/XbotHeader.hpp"
 
 namespace xbot::comms {
-class Service {
+class Service : public ServiceIo {
  public:
   explicit Service(uint16_t service_id, uint32_t tick_rate_micros,
                    void *processing_thread_stack,
@@ -37,35 +37,20 @@ class Service {
    * @param service Pointer to the service to start
    * @return null
    */
-  static void startProcessingHelper(void *service) {
+  static void *startProcessingHelper(void *service) {
     static_cast<Service *>(service)->runProcessing();
-  }
-
-  /**
-   * Since the portable thread implementation does not know what a class is, we
-   * use this helper to start the service.
-   * @param service Pointer to the service to start
-   * @return null
-   */
-  static void startIoHelper(void *service) {
-    static_cast<Service *>(service)->runIo();
+    return nullptr;
   }
 
  protected:
   // Buffer to prepare service advertisements, static to allow reuse between
-  // services.
-  uint8_t sd_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)]{};
+  // services
+  uint8_t sd_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)];
 
   // Scratch space for the header. This will only ever be accessed in the
   // process_thread, so we don't need a mutex Don't make it static, so that
   // multiple services can build packets in parallel (it will happen often)
   datatypes::XbotHeader header_{};
-
-  /**
-   * ID of the service, needs to be unique for each node.
-   */
-  const uint16_t service_id_;
-  XBOT_SOCKET_TYPEDEF udp_socket_{};
 
   bool SendData(uint16_t target_id, const void *data, size_t size);
 
@@ -77,21 +62,7 @@ class Service {
   void *processing_thread_stack_;
   size_t processing_thread_stack_size_;
   XBOT_THREAD_TYPEDEF process_thread_{};
-  /**
-   * The IO thread is used to receive and send the data.
-   * This allows the process_thread to block as long as it likes.
-   */
-#ifdef XBOT_ENABLE_STATIC_STACK
-  uint8_t io_thread_stack_[config::service::io_thread_stack_size]{};
-#endif
-  XBOT_THREAD_TYPEDEF io_thread_{};
 
-  XBOT_MUTEX_TYPEDEF state_mutex_{};
-
-  // Storage for the queue
-  static constexpr size_t packet_queue_length = 10;
-  uint8_t packet_queue_buffer[packet_queue_length * sizeof(void *)]{};
-  XBOT_QUEUE_TYPEDEF packet_queue_{};
   uint32_t tick_rate_micros_;
   uint32_t last_tick_micros_ = 0;
   uint32_t last_service_discovery_micros_ = 0;
@@ -100,21 +71,17 @@ class Service {
   uint32_t target_ip = 0;
   uint32_t target_port = 0;
 
-  bool stopped = true;
-
   void heartbeat();
 
   void runProcessing();
-
-  void runIo();
 
   void fillHeader();
 
   bool SendDataClaimAck();
 
-  virtual bool advertiseService() = 0;
-
   virtual void tick() = 0;
+
+  virtual bool advertiseService() = 0;
 
   virtual bool handlePacket(const datatypes::XbotHeader *header,
                             const void *payload) = 0;

@@ -3,6 +3,7 @@
 //
 #include <ulog.h>
 
+#include <Io.hpp>
 #include <Service.hpp>
 #include <algorithm>
 #include <xbot/datatypes/ClaimPayload.hpp>
@@ -13,10 +14,11 @@
 xbot::comms::Service::Service(uint16_t service_id, uint32_t tick_rate_micros,
                               void *processing_thread_stack,
                               size_t processing_thread_stack_size)
-    : processing_thread_stack_(processing_thread_stack),
+    : ServiceIo(service_id),
+      sd_buffer{},
+      processing_thread_stack_(processing_thread_stack),
       processing_thread_stack_size_(processing_thread_stack_size),
-      tick_rate_micros_(tick_rate_micros),
-      service_id_(service_id) {}
+      tick_rate_micros_(tick_rate_micros) {}
 
 xbot::comms::Service::~Service() {
   sock::deinitialize(&udp_socket_);
@@ -25,6 +27,7 @@ xbot::comms::Service::~Service() {
 }
 
 bool xbot::comms::Service::start() {
+  Io::registerServiceIo(this);
   stopped = false;
 
   // Set reboot flag
@@ -46,17 +49,7 @@ bool xbot::comms::Service::start() {
                           processing_thread_stack_size_)) {
     return false;
   }
-#ifdef XBOT_ENABLE_STATIC_STACK
-  if (!thread::initialize(&io_thread_, Service::startIoHelper, this,
-                          io_thread_stack_, sizeof(io_thread_stack_))) {
-    return false;
-  }
-#else
-  if (!thread::initialize(&io_thread_, Service::startIoHelper, this, nullptr,
-                          0)) {
-    return false;
-  }
-#endif
+
   return true;
 }
 
@@ -92,52 +85,6 @@ bool xbot::comms::Service::SendDataClaimAck() {
   packet::PacketPtr ptr = packet::allocatePacket();
   packet::packetAppendData(ptr, &header_, sizeof(header_));
   return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
-}
-
-void xbot::comms::Service::runIo() {
-  while (true) {
-    // Check, if we should stop
-    {
-      Lock lk(&state_mutex_);
-      if (stopped) {
-        return;
-      }
-    }
-
-    packet::PacketPtr packet = nullptr;
-    if (sock::receivePacket(&udp_socket_, &packet)) {
-      // Got a packet, check if valid and put it into the processing queue.
-      void *buffer = nullptr;
-      size_t used_data = 0;
-      if (!packet::packetGetData(packet, &buffer, &used_data)) {
-        packet::freePacket(packet);
-        continue;
-      }
-      if (used_data < sizeof(datatypes::XbotHeader)) {
-        ULOG_ARG_ERROR(&service_id_, "Packet too short to contain header.");
-        packet::freePacket(packet);
-        continue;
-      }
-
-      const auto header = reinterpret_cast<datatypes::XbotHeader *>(buffer);
-      // Check, if the header size is correct
-      if (used_data - sizeof(datatypes::XbotHeader) != header->payload_size) {
-        // TODO: In order to allow chaining of xBot packets in the future, this
-        // needs to be adapted. (scan and split packets)
-        ULOG_ARG_ERROR(&service_id_,
-                       "Packet header size does not match actual packet size.");
-        packet::freePacket(packet);
-        continue;
-      }
-
-      if (!queue::queuePushItem(&packet_queue_, packet)) {
-        ULOG_ARG_ERROR(&service_id_,
-                       "Error pushing packet into processing queue.");
-        packet::freePacket(packet);
-        continue;
-      }
-    }
-  }
 }
 
 void xbot::comms::Service::fillHeader() {
@@ -230,7 +177,8 @@ void xbot::comms::Service::runProcessing() {
             // it's ok, overwrite the target
             const auto payload_ptr =
                 reinterpret_cast<datatypes::ClaimPayload *>(
-                    buffer + sizeof(datatypes::XbotHeader));
+                    static_cast<uint8_t *>(buffer) +
+                    sizeof(datatypes::XbotHeader));
             target_ip = payload_ptr->target_ip;
             target_port = payload_ptr->target_port;
             heartbeat_micros_ = payload_ptr->heartbeat_micros;
@@ -249,7 +197,8 @@ void xbot::comms::Service::runProcessing() {
           }
         } else {
           // Packet seems OK, hand to service
-          handlePacket(header, buffer + sizeof(datatypes::XbotHeader));
+          handlePacket(header, static_cast<uint8_t *>(buffer) +
+                                   sizeof(datatypes::XbotHeader));
         }
       }
 
