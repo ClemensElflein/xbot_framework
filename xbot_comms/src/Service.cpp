@@ -27,7 +27,6 @@ xbot::comms::Service::~Service() {
 }
 
 bool xbot::comms::Service::start() {
-  Io::registerServiceIo(this);
   stopped = false;
 
   // Set reboot flag
@@ -43,6 +42,8 @@ bool xbot::comms::Service::start() {
                          packet_queue_buffer, sizeof(packet_queue_buffer))) {
     return false;
   }
+
+  Io::registerServiceIo(this);
 
   if (!thread::initialize(&process_thread_, Service::startProcessingHelper,
                           this, processing_thread_stack_,
