@@ -3,10 +3,7 @@
 //
 #include "Lock.hpp"
 
-#include <cassert>
-
 xbot::comms::Lock::Lock(mutex::MutexPtr mutex) : mutex_(mutex) {
-  assert(mutex != nullptr);
   mutex::lockMutex(mutex_);
 }
 
