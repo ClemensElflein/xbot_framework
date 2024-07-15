@@ -11,10 +11,10 @@
       "type": "uint32_t"
     },
     {
+      "encoding": "zcbor",
       "id": 2,
       "name": "A Pet",
-      "type": "Pet",
-      "encoding": "zcbor"
+      "type": "Pet"
     }
   ],
   "outputs": [
@@ -29,10 +29,10 @@
       "type": "uint32_t"
     },
     {
+      "encoding": "zcbor",
       "id": 2,
       "name": "A Pet",
-      "type": "Pet",
-      "encoding": "zcbor"
+      "type": "Pet"
     }
   ],
   "registers": [
