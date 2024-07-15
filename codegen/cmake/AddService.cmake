@@ -8,7 +8,9 @@ function(add_service SERVICE_NAME JSON_FILE)
     )
 
     add_library(${SERVICE_NAME} OBJECT EXCLUDE_FROM_ALL
-            ${CMAKE_CURRENT_BINARY_DIR}/generated/${SERVICE_NAME}Base.cpp
+    )
+
+    target_sources(${SERVICE_NAME} PRIVATE             ${CMAKE_CURRENT_BINARY_DIR}/generated/${SERVICE_NAME}Base.cpp
             ${CMAKE_CURRENT_BINARY_DIR}/generated/include/${SERVICE_NAME}Base.hpp
     )
 
