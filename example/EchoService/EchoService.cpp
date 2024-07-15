@@ -22,3 +22,6 @@ bool EchoService::OnSomeIntegerChanged(const uint32_t &new_value) {
   std::cout << "int changed" << std::endl;
   return true;
 }
+bool EchoService::OnAPetChanged(const Pet &new_value) {
+  return SendAPet(new_value);
+}

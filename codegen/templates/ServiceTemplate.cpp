@@ -36,11 +36,14 @@ bool ServiceTemplateBase::handlePacket(const xbot::comms::datatypes::XbotHeader 
                     cog.outl("}");
                     cog.outl(f"return {i['callback_name']}(static_cast<const {i['type']}*>(payload), header->payload_size/sizeof({i['type']}));");
                 else:
-                    cog.outl(f"if(header->payload_size != sizeof({i['type']})) {{");
-                    cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data size\");");
-                    cog.outl("    return false;");
-                    cog.outl("}");
-                    cog.outl(f"return {i['callback_name']}(*static_cast<const {i['type']}*>(payload));");
+                    if i['custom_decoder_code']:
+                        cog.outl(i['custom_decoder_code'])
+                    else:
+                        cog.outl(f"if(header->payload_size != sizeof({i['type']})) {{");
+                        cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data size\");");
+                        cog.outl("    return false;");
+                        cog.outl("}");
+                        cog.outl(f"return {i['callback_name']}(*static_cast<const {i['type']}*>(payload));");
             ]]]*/
             case 0:
             if(header->payload_size % sizeof(char) != 0) {
@@ -66,20 +69,20 @@ cog.outl(f"bool {service['class_name']}::advertiseService() {{")
 ]]]*/
 bool ServiceTemplateBase::advertiseService() {
 //[[[end]]]
-    static_assert(sizeof(sd_buffer)>80+sizeof(SERVICE_DESCRIPTION_CBOR), "sd_buffer too small for service description. increase size");
+    static_assert(sizeof(scratch_buffer)>80+sizeof(SERVICE_DESCRIPTION_CBOR), "scratch_buffer too small for service description. increase size");
 
     size_t index = 0;
     // Build CBOR payload
     // 0xA4 = object with 4 entries
-    sd_buffer[index++] = 0xA4;
+    scratch_buffer[index++] = 0xA4;
     // Key1
     // 0x62 = text(3)
-    sd_buffer[index++] = 0x63;
-    sd_buffer[index++] = 'n';
-    sd_buffer[index++] = 'i';
-    sd_buffer[index++] = 'd';
+    scratch_buffer[index++] = 0x63;
+    scratch_buffer[index++] = 'n';
+    scratch_buffer[index++] = 'i';
+    scratch_buffer[index++] = 'd';
     // 0x84 = array with 4 entries (4x32 = 128 bit; our ID length)
-    sd_buffer[index++] = 0x84;
+    scratch_buffer[index++] = 0x84;
 
     uint8_t id[16];
     if(!xbot::comms::system::getNodeId(id, 16)) {
@@ -89,37 +92,37 @@ bool ServiceTemplateBase::advertiseService() {
     }
     for(size_t i = 0; i < sizeof(id); i+=4) {
         // 0x1A == 32 bit unsigned, positive
-        sd_buffer[index++] = 0x1A;
-        sd_buffer[index++] = id[i+0];
-        sd_buffer[index++] = id[i+1];
-        sd_buffer[index++] = id[i+2];
-        sd_buffer[index++] = id[i+3];
+        scratch_buffer[index++] = 0x1A;
+        scratch_buffer[index++] = id[i+0];
+        scratch_buffer[index++] = id[i+1];
+        scratch_buffer[index++] = id[i+2];
+        scratch_buffer[index++] = id[i+3];
     }
 
     // Key2
     // 0x62 = text(3)
-    sd_buffer[index++] = 0x63;
-    sd_buffer[index++] = 's';
-    sd_buffer[index++] = 'i';
-    sd_buffer[index++] = 'd';
+    scratch_buffer[index++] = 0x63;
+    scratch_buffer[index++] = 's';
+    scratch_buffer[index++] = 'i';
+    scratch_buffer[index++] = 'd';
 
     // 0x19 == 16 bit unsigned, positive
-    sd_buffer[index++] = 0x19;
-    sd_buffer[index++] = (service_id_>>8) & 0xFF;
-    sd_buffer[index++] = service_id_ & 0xFF;
+    scratch_buffer[index++] = 0x19;
+    scratch_buffer[index++] = (service_id_>>8) & 0xFF;
+    scratch_buffer[index++] = service_id_ & 0xFF;
 
 
     // Key2
     // 0x68 = text(8)
-    sd_buffer[index++] = 0x68;
-    sd_buffer[index++] = 'e';
-    sd_buffer[index++] = 'n';
-    sd_buffer[index++] = 'd';
-    sd_buffer[index++] = 'p';
-    sd_buffer[index++] = 'o';
-    sd_buffer[index++] = 'i';
-    sd_buffer[index++] = 'n';
-    sd_buffer[index++] = 't';
+    scratch_buffer[index++] = 0x68;
+    scratch_buffer[index++] = 'e';
+    scratch_buffer[index++] = 'n';
+    scratch_buffer[index++] = 'd';
+    scratch_buffer[index++] = 'p';
+    scratch_buffer[index++] = 'o';
+    scratch_buffer[index++] = 'i';
+    scratch_buffer[index++] = 'n';
+    scratch_buffer[index++] = 't';
 
     // Get the IP address
     char address[16]{};
@@ -136,33 +139,33 @@ bool ServiceTemplateBase::advertiseService() {
         return false;
     }
     // Object with 2 entries (ip, port)
-    sd_buffer[index++] = 0xA2;
+    scratch_buffer[index++] = 0xA2;
     // text(2) = "ip"
-    sd_buffer[index++] = 0x62;
-    sd_buffer[index++] = 'i';
-    sd_buffer[index++] = 'p';
-    sd_buffer[index++] = 0x60 + len;
-    strncpy(reinterpret_cast<char*>(sd_buffer+index), address, len);
+    scratch_buffer[index++] = 0x62;
+    scratch_buffer[index++] = 'i';
+    scratch_buffer[index++] = 'p';
+    scratch_buffer[index++] = 0x60 + len;
+    strncpy(reinterpret_cast<char*>(scratch_buffer+index), address, len);
     index += len;
-    sd_buffer[index++] = 0x64;
-    sd_buffer[index++] = 'p';
-    sd_buffer[index++] = 'o';
-    sd_buffer[index++] = 'r';
-    sd_buffer[index++] = 't';
+    scratch_buffer[index++] = 0x64;
+    scratch_buffer[index++] = 'p';
+    scratch_buffer[index++] = 'o';
+    scratch_buffer[index++] = 'r';
+    scratch_buffer[index++] = 't';
     // 0x19 == 16 bit unsigned, positive
-    sd_buffer[index++] = 0x19;
-    sd_buffer[index++] = (port>>8) & 0xFF;
-    sd_buffer[index++] = port & 0xFF;
+    scratch_buffer[index++] = 0x19;
+    scratch_buffer[index++] = (port>>8) & 0xFF;
+    scratch_buffer[index++] = port & 0xFF;
 
     // Key3
     // 0x64 = text(4)
-    sd_buffer[index++] = 0x64;
-    sd_buffer[index++] = 'd';
-    sd_buffer[index++] = 'e';
-    sd_buffer[index++] = 's';
-    sd_buffer[index++] = 'c';
+    scratch_buffer[index++] = 0x64;
+    scratch_buffer[index++] = 'd';
+    scratch_buffer[index++] = 'e';
+    scratch_buffer[index++] = 's';
+    scratch_buffer[index++] = 'c';
 
-    memcpy(sd_buffer+index, SERVICE_DESCRIPTION_CBOR, sizeof(SERVICE_DESCRIPTION_CBOR));
+    memcpy(scratch_buffer+index, SERVICE_DESCRIPTION_CBOR, sizeof(SERVICE_DESCRIPTION_CBOR));
     index+=sizeof(SERVICE_DESCRIPTION_CBOR);
 
 
@@ -187,7 +190,7 @@ bool ServiceTemplateBase::advertiseService() {
 
     xbot::comms::packet::PacketPtr ptr = xbot::comms::packet::allocatePacket();
     xbot::comms::packet::packetAppendData(ptr, &header, sizeof(header));
-    xbot::comms::packet::packetAppendData(ptr, sd_buffer, header.payload_size);
+    xbot::comms::packet::packetAppendData(ptr, scratch_buffer, header.payload_size);
     return xbot::comms::sock::transmitPacket(&udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
 }
 
@@ -199,9 +202,14 @@ for output in service["outputs"]:
         cog.outl(f"    return SendData({output['id']}, data, length*sizeof({output['type']}));")
         cog.outl("}")
     else:
-        cog.outl(f"bool {service['class_name']}::{output['method_name']}(const {output['type']} &data) {{")
-        cog.outl(f"    return SendData({output['id']}, &data, sizeof({output['type']}));")
-        cog.outl("}")
+        if output['custom_encoder_code']:
+            cog.outl(f"bool {service['class_name']}::{output['method_name']}(const {output['type']} &data) {{")
+            cog.outl(output['custom_encoder_code'])
+            cog.outl("}")
+        else:
+            cog.outl(f"bool {service['class_name']}::{output['method_name']}(const {output['type']} &data) {{")
+            cog.outl(f"    return SendData({output['id']}, &data, sizeof({output['type']}));")
+            cog.outl("}")
 ]]]*/
 bool ServiceTemplateBase::SendExampleOutput1(const char* data, uint32_t length) {
     return SendData(0, data, length*sizeof(char));

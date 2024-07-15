@@ -4,6 +4,7 @@
 
 #ifndef ECHOSERVICE_HPP
 #define ECHOSERVICE_HPP
+
 #include "EchoServiceBase.hpp"
 
 class EchoService : public EchoServiceBase {
@@ -20,6 +21,8 @@ class EchoService : public EchoServiceBase {
   bool OnInputTextChanged(const char *new_value, uint32_t length) override;
 
   bool OnSomeIntegerChanged(const uint32_t &new_value) override;
+
+  bool OnAPetChanged(const Pet &new_value) override;
 };
 
 #endif  // ECHOSERVICE_HPP

@@ -43,9 +43,10 @@ class Service : public ServiceIo {
   }
 
  protected:
-  // Buffer to prepare service advertisements, static to allow reuse between
-  // services
-  uint8_t sd_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)];
+  // Buffer to serialize service announcements and also custom serialized data
+  // (zcbor)
+  uint8_t
+      scratch_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)];
 
   // Scratch space for the header. This will only ever be accessed in the
   // process_thread, so we don't need a mutex Don't make it static, so that

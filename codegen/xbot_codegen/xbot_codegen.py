@@ -35,11 +35,14 @@ def loadService(path: str) -> dict:
     }
 
     # Transform the input definitions
+    additional_includes = []
     inputs = []
     for json_input in json_service["inputs"]:
         # Convert to valid C++ function name
         input_name = toCamelCase(json_input['name'])
         input_id = int(json_input['id'])
+        callback_name = f"On{input_name}Changed"
+        custom_decoder_code = None
         # Handle array types (type[length])
         if "[" in json_input["type"] and "]" in json_input["type"]:
             # Split the type definition at the [, validate and get max length
@@ -54,17 +57,33 @@ def loadService(path: str) -> dict:
                 "type": type,
                 "is_array": True,
                 "max_length": max_length,
-                "callback_name": f"On{input_name}Changed"
+                "callback_name": callback_name
             }
         else:
             # Not an array type
             type = json_input["type"]
+            if json_input.get("encoding") == "zcbor":
+                # Add additional include for the decoder
+                include_name = f"<{json_input['type']}_decode.h>"
+                if include_name not in additional_includes:
+                    additional_includes.append(include_name)
+                # Generate the decoding code
+                custom_decoder_code = ("{\n"
+                                       f"   struct {json_input['type']} result;\n"
+                                       f"   if(cbor_decode_{json_input['type']}(static_cast<const uint8_t*>(payload), header->payload_size, &result, nullptr) == ZCBOR_SUCCESS) {{\n"
+                                       f"       return {callback_name}(result);\n"
+                                       "    } else {\n"
+                                       "        return false;\n"
+                                       "    }\n"
+                                       "}"
+                                       )
             input = {
                 "id": input_id,
                 "name": input_name,
                 "type": type,
                 "is_array": False,
-                "callback_name": f"On{input_name}Changed"
+                "callback_name": callback_name,
+                "custom_decoder_code": custom_decoder_code
             }
 
         inputs.append(input)
@@ -76,6 +95,8 @@ def loadService(path: str) -> dict:
         # Convert to valid C++ function name
         output_name = toCamelCase(json_output['name'])
         output_id = int(json_output['id'])
+        method_name = f"Send{output_name}"
+        custom_encoder_code = None
         # Handle array types (type[length])
         if "[" in json_output["type"] and "]" in json_output["type"]:
             # Split the type definition at the [, validate and get max length
@@ -90,19 +111,36 @@ def loadService(path: str) -> dict:
                 "type": type,
                 "is_array": True,
                 "max_length": max_length,
-                "method_name": f"Send{output_name}"
+                "method_name": method_name
             }
         else:
             # Not an array type
+            if json_output.get("encoding") == "zcbor":
+                # Add additional include for the decoder
+                include_name = f"<{json_output['type']}_encode.h>"
+                if include_name not in additional_includes:
+                    additional_includes.append(include_name)
+                # Generate the decoding code
+                custom_encoder_code = ("{\n"
+                                       f"   size_t encoded_len = 0;\n"
+                                       f"   if(cbor_encode_{json_output['type']}(scratch_buffer, sizeof(scratch_buffer), &data, &encoded_len) == ZCBOR_SUCCESS) {{\n"
+                                       f"       return SendData({output_id}, scratch_buffer, encoded_len);\n"
+                                       "    } else {\n"
+                                       "        return false;\n"
+                                       "    }\n"
+                                       "}"
+                                       )
             type = json_output["type"]
             output = {
                 "id": output_id,
                 "name": output_name,
                 "type": type,
                 "is_array": False,
-                "method_name": f"Send{output_name}"
+                "method_name": method_name,
+                "custom_encoder_code": custom_encoder_code
             }
 
         outputs.append(output)
     service["outputs"] = outputs
+    service["additional_includes"] = additional_includes
     return service

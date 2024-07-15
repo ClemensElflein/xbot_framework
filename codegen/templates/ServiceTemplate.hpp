@@ -20,6 +20,12 @@ cog.outl(f"#define {service['class_name'].upper()}_HPP")
 #include "Service.hpp"
 
 /*[[[cog
+for include in service['additional_includes']:
+    cog.outl(f"#include {include}")
+]]]*/
+//[[[end]]]
+
+/*[[[cog
 cog.outl(f"class {service['class_name']} : public xbot::comms::Service {{")
 ]]]*/
 class ServiceTemplateBase : public xbot::comms::Service {
