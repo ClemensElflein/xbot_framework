@@ -11,43 +11,49 @@ namespace xbot::hub {
 
 class ServiceInputInfo {
  public:
+  ServiceInputInfo() = default;
+
   ServiceInputInfo(const ServiceInputInfo &other)
-      : id_(other.id_), name_(other.name_), type_(other.type_) {}
+      : id(other.id), name(other.name), type(other.type) {}
 
   ServiceInputInfo(ServiceInputInfo &&other) noexcept
-      : id_(other.id_),
-        name_(std::move(other.name_)),
-        type_(std::move(other.type_)) {}
+      : id(other.id),
+        name(std::move(other.name)),
+        type(std::move(other.type)) {}
 
   ServiceInputInfo &operator=(const ServiceInputInfo &other) {
     if (this == &other) return *this;
-    id_ = other.id_;
-    name_ = other.name_;
-    type_ = other.type_;
+    id = other.id;
+    name = other.name;
+    type = other.type;
     return *this;
   }
 
   ServiceInputInfo &operator=(ServiceInputInfo &&other) noexcept {
     if (this == &other) return *this;
-    id_ = other.id_;
-    name_ = std::move(other.name_);
-    type_ = std::move(other.type_);
+    id = other.id;
+    name = std::move(other.name);
+    type = std::move(other.type);
     return *this;
   }
 
   ServiceInputInfo(uint16_t id, std::string name, std::string type)
-      : id_(id), name_(std::move(name)), type_(std::move(type)) {}
+      : id(id), name(std::move(name)), type(std::move(type)) {}
 
   // ID of the input (used for sending data to it)
-  uint16_t id_;
+  uint16_t id{};
 
   // Name of the input channel (e.g. "speed")
-  std::string name_;
+  std::string name{};
 
   // Type of the input channel (e.g. uint32_t or char[100])
-  std::string type_;
+  std::string type{};
+
+  // Encoding: Optional string specifying the encoding (e.g. zcbor)
+  std::string encoding{};
 };
 
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ServiceInputInfo, id, name, type, encoding)
 }  // namespace xbot::hub
 
 #endif  // SERVICEINPUTINFO_HPP

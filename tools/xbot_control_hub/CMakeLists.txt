@@ -10,10 +10,10 @@ add_subdirectory(ext)
 add_executable(xbot_hub main.cpp Socket.cpp
         ServiceDiscovery.cpp
         ServiceDiscovery.hpp
-        ServiceInfo.hpp
-        ServiceInputInfo.hpp
+        data/ServiceInfo.hpp
+        data/ServiceInputInfo.hpp
         endpoint_utils.hpp
-        ServiceInfo.cpp
+        data/ServiceInfo.cpp
         CrowToSpeedlogHandler.hpp
         ServiceInterfaceFactory.cpp
         ServiceInterfaceFactory.hpp)

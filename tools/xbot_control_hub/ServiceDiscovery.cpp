@@ -26,8 +26,8 @@ bool ServiceDiscovery::GetEndpoint(const std::string &uid, uint32_t &ip,
   std::unique_lock lk(sd_mutex_);
   if (discovered_services_.contains(uid)) {
     auto &service_info = discovered_services_.at(uid);
-    ip = service_info.ip_;
-    port = service_info.port_;
+    ip = service_info.ip;
+    port = service_info.port;
     return true;
   }
   ip = 0;
@@ -64,6 +64,12 @@ std::unique_ptr<ServiceInfo> ServiceDiscovery::GetServiceInfo(
 
   return std::make_unique<ServiceInfo>(discovered_services_.at(uid));
 }
+std::unique_ptr<std::map<std::string, ServiceInfo>>
+ServiceDiscovery::GetAllSerivces() {
+  std::unique_lock lk(sd_mutex_);
+  return std::make_unique<std::map<std::string, ServiceInfo>>(
+      discovered_services_);
+}
 
 void ServiceDiscovery::Run() {
   std::vector<uint8_t> packet{};
@@ -93,33 +99,16 @@ void ServiceDiscovery::Run() {
                 packet.begin() + sizeof(comms::datatypes::XbotHeader),
                 packet.end());
 
-            // Convert endpoint string to int
-            uint32_t ip =
-                IpStringToInt(json.at("endpoint").at("ip").get<std::string>());
-
-            std::vector<ServiceInputInfo> inputs{};
-
-            uint32_t node_id[] = {json.at("nid").at(0).get<uint32_t>(),
-                                  json.at("nid").at(1).get<uint32_t>(),
-                                  json.at("nid").at(2).get<uint32_t>(),
-                                  json.at("nid").at(3).get<uint32_t>()};
-
             // Build the ServiceInfo object from the received data.
-            ServiceInfo info{node_id,
-                             json.at("sid").get<uint16_t>(),
-                             ip,
-                             json.at("endpoint").at("port").get<uint16_t>(),
-                             json.at("desc").at("type").get<std::string>(),
-                             json.at("desc").at("version").get<uint32_t>(),
-                             inputs};
+            ServiceInfo info = json;
 
             // Check for valid endpoint, if none is given the service is not
             // reachable, so we drop it
-            if (info.ip_ == 0 || info.port_ == 0) {
+            if (info.ip == 0 || info.port == 0) {
               spdlog::warn(
                   "Service registered with invalid endpoint. Ignoring. (ID: "
                   "{}, endpoint: {})",
-                  info.unique_id_, EndpointIntToString(info.ip_, info.port_));
+                  info.unique_id_, EndpointIntToString(info.ip, info.port));
               continue;
             }
 
@@ -131,30 +120,30 @@ void ServiceDiscovery::Run() {
                 // (every thing else is constant) and update
                 if (auto &old_service_info =
                         discovered_services_.at(info.unique_id_);
-                    old_service_info.ip_ != info.ip_ ||
-                    old_service_info.port_ != info.port_) {
+                    old_service_info.ip != info.ip ||
+                    old_service_info.port != info.port) {
                   spdlog::info("Endpoint updated (ID: {}, new endpoint: {})",
                                info.unique_id_,
-                               EndpointIntToString(info.ip_, info.port_));
+                               EndpointIntToString(info.ip, info.port));
                   // Backup the old infos, so that we can pass them to the
                   // callback
-                  const auto old_ip = old_service_info.ip_;
-                  const auto old_port = old_service_info.port_;
+                  const auto old_ip = old_service_info.ip;
+                  const auto old_port = old_service_info.port;
 
                   // Update the entry
-                  old_service_info.ip_ = info.ip_;
-                  old_service_info.port_ = info.port_;
+                  old_service_info.ip = info.ip;
+                  old_service_info.port = info.port;
 
                   // Notify callbacks
                   for (const auto &callback : registered_callbacks_) {
                     callback->OnEndpointChanged(info.unique_id_, old_ip,
-                                                old_port, info.ip_, info.port_);
+                                                old_port, info.ip, info.port);
                   }
                 }
               } else {
                 spdlog::info("Found new service (ID: {}, endpoint: {})",
                              info.unique_id_,
-                             EndpointIntToString(info.ip_, info.port_));
+                             EndpointIntToString(info.ip, info.port));
                 discovered_services_.emplace(info.unique_id_, info);
                 // Notify callbacks
                 for (const auto &callback : registered_callbacks_) {

@@ -5,6 +5,7 @@
 #include "ServiceDiscovery.hpp"
 #include "ServiceInterfaceFactory.hpp"
 #include "crow.h"
+#include "endpoint_utils.hpp"
 
 using namespace xbot;
 
@@ -23,6 +24,16 @@ int main() {
   crow::SimpleApp app;
 
   CROW_ROUTE(app, "/")([]() { return "Hello world"; });
+  CROW_ROUTE(app, "/services")
+  ([]() {
+    nlohmann::json result = nlohmann::detail::value_t::object;
+    const auto services = hub::ServiceDiscovery::GetAllSerivces();
+
+    for (const auto &s : *services) {
+      result[s.first] = s.second;
+    }
+    return result.dump(2);
+  });
 
   CROW_WEBSOCKET_ROUTE(app, "/socket")
       .onopen([&](crow::websocket::connection &conn) {

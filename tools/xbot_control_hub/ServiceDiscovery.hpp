@@ -9,7 +9,7 @@
 #include <mutex>
 #include <thread>
 
-#include "ServiceInfo.hpp"
+#include "data/ServiceInfo.hpp"
 
 namespace xbot::hub {
 
@@ -54,6 +54,11 @@ class ServiceDiscovery {
    * found.
    */
   static std::unique_ptr<ServiceInfo> GetServiceInfo(const std::string &uid);
+
+  /**
+   * Get a copy of registered services
+   */
+  static std::unique_ptr<std::map<std::string, ServiceInfo>> GetAllSerivces();
 
  private:
   static void Run();
