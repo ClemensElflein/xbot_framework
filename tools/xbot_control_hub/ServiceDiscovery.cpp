@@ -69,8 +69,11 @@ void ServiceDiscovery::Run() {
   std::vector<uint8_t> packet{};
   uint32_t sender_ip;
   uint16_t sender_port;
+  // While not stopped
   while (!stopped_.test()) {
+    // Try receive a packet, this will return false on timeout.
     if (sd_socket_.ReceivePacket(sender_ip, sender_port, packet)) {
+      // Check, if packet has at least enough space for our header
       if (packet.size() >= sizeof(comms::datatypes::XbotHeader)) {
         const auto header =
             reinterpret_cast<comms::datatypes::XbotHeader *>(packet.data());
@@ -124,8 +127,8 @@ void ServiceDiscovery::Run() {
             {
               std::unique_lock lk(sd_mutex_);
               if (discovered_services_.contains(info.unique_id_)) {
-                // Check, if service endpoint was updated (every thing else is
-                // constant) and update
+                // Check, if service endpoint was updated
+                // (every thing else is constant) and update
                 if (auto &old_service_info =
                         discovered_services_.at(info.unique_id_);
                     old_service_info.ip_ != info.ip_ ||

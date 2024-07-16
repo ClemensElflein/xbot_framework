@@ -190,8 +190,16 @@ void ServiceInterfaceFactory::RunIo() {
               continue;
             }
           }
-          const auto payload_ptr = reinterpret_cast<void *>(
+          const auto payload_ptr = reinterpret_cast<uint8_t *>(
               packet.data() + sizeof(comms::datatypes::XbotHeader));
+
+          try {
+            nlohmann::json result = nlohmann::json::from_cbor(payload_ptr);
+            spdlog::info(result.dump());
+          } catch (std::exception &e) {
+            spdlog::error("error parsing json {}", e.what());
+          }
+
           spdlog::info("Got data!");
           uint64_t stamp = header->timestamp;
           nlohmann::json json = {

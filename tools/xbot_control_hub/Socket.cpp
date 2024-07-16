@@ -104,8 +104,15 @@ bool Socket::Start() {
 bool Socket::JoinMulticast(std::string ip) {
   if (fd_ == -1) return false;
   ip_mreq opt{};
-  opt.imr_interface.s_addr = 0;
+  opt.imr_interface.s_addr = 0;  // inet_addr("10.24.0.1");
   opt.imr_multiaddr.s_addr = inet_addr(ip.c_str());
+
+  // if (setsockopt(fd_, IPPROTO_IP, IP_MULTICAST_IF, &opt.imr_interface,
+  // sizeof(opt.imr_interface)) < 0) {
+  // close(fd_);
+  // fd_ = -1;
+  // return false;
+  // }
 
   if (setsockopt(fd_, IPPROTO_IP, IP_ADD_MEMBERSHIP, &opt, sizeof(opt)) < 0) {
     close(fd_);
