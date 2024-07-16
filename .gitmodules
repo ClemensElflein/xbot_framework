@@ -1,9 +1,9 @@
-[submodule "libxbot-service/ext/cpputest"]
-	path = libxbot-service/ext/cpputest
+[submodule "xbot_comms/ext/cpputest"]
+	path = libxbot-service/ext/ext/cpputest
 	url = https://github.com/cpputest/cpputest.git
-[submodule "libxbot-service/ext/ulog"]
-	path = libxbot-service/ext/ulog
+[submodule "xbot_comms/ext/ulog"]
+	path = libxbot-service/ext/ext/ulog
 	url = https://github.com/ClemensElflein/ulog.git
-[submodule "libxbot-service/ext/zcbor"]
-	path = libxbot-service/ext/zcbor
+[submodule "xbot_comms/ext/zcbor"]
+	path = libxbot-service/ext/ext/zcbor
 	url = https://github.com/NordicSemiconductor/zcbor.git
