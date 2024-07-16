@@ -18,7 +18,7 @@ function(add_message MESSAGE_NAME MESSAGE_FILE)
             ${MESSAGE_FILE}
     )
 
-    add_library(ZCBOR_${MESSAGE_NAME} OBJECT EXCLUDE_FROM_ALL)
+    add_library(ZCBOR_${MESSAGE_NAME} EXCLUDE_FROM_ALL)
     target_sources(ZCBOR_${MESSAGE_NAME} PRIVATE
             ${CMAKE_CURRENT_BINARY_DIR}/generated/zcbor/${MESSAGE_NAME}/${MESSAGE_NAME}_encode.c
             ${CMAKE_CURRENT_BINARY_DIR}/generated/zcbor/${MESSAGE_NAME}/${MESSAGE_NAME}_decode.c
