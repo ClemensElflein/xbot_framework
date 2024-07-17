@@ -7,7 +7,7 @@
 #include "CppUTest/TestHarness.h"
 #include "CppUTest/TestHarness_c.h"
 
-using namespace xbot::comms;
+using namespace xbot::service;
 
 TEST_GROUP(QueueTests){
 

@@ -18,7 +18,7 @@
 
 #include "portable/mutex.hpp"
 
-namespace xbot::comms::system {
+namespace xbot::service::system {
 XBOT_MUTEX_TYPEDEF ulog_mutex_;
 
 uint8_t node_id_[16]{};
@@ -80,7 +80,7 @@ void generateUniqueId() {
 }
 
 void initSystem(uint32_t node_id) {
-  xbot::comms::mutex::initialize(&ulog_mutex_);
+  xbot::service::mutex::initialize(&ulog_mutex_);
 
   // Init system with a hardcoded node_id or get a random one.
   if (node_id != 0) {
@@ -117,12 +117,12 @@ bool getNodeId(uint8_t *id, size_t id_len) {
   memcpy(id, node_id_, id_len);
   return true;
 }
-}  // namespace xbot::comms::system
+}  // namespace xbot::service::system
 
 void ulog_lock_mutex() {
-  xbot::comms::mutex::lockMutex(&xbot::comms::system::ulog_mutex_);
+  xbot::service::mutex::lockMutex(&xbot::service::system::ulog_mutex_);
 }
 
 void ulog_unlock_mutex() {
-  xbot::comms::mutex::unlockMutex(&xbot::comms::system::ulog_mutex_);
+  xbot::service::mutex::unlockMutex(&xbot::service::system::ulog_mutex_);
 }

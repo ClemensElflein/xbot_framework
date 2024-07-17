@@ -7,12 +7,12 @@
 
 #include <xbot/config.hpp>
 
-namespace xbot::comms::packet {
+namespace xbot::service::packet {
 struct Packet {
   size_t used_data;
   uint8_t buffer[xbot::config::max_packet_size];
 };
-}  // namespace xbot::comms::packet
+}  // namespace xbot::service::packet
 
 #define XBOT_PACKET_TYPEDEF Packet
 

@@ -7,7 +7,7 @@
 #include <string>
 #include <utility>
 
-namespace xbot::hub {
+namespace xbot::serviceif {
 
 class ServiceInputInfo {
  public:
@@ -54,6 +54,6 @@ class ServiceInputInfo {
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(ServiceInputInfo, id, name, type, encoding)
-}  // namespace xbot::hub
+}  // namespace xbot::serviceif
 
 #endif  // SERVICEINPUTINFO_HPP

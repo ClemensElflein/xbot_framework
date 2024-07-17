@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.25)
-project(libxbot-service C CXX)
+project(xbot-service C CXX)
 
 
 #set(CMAKE_CXX_STANDARD 23)
@@ -9,10 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Allow logging using ulog
 #add_compile_definitions(ULOG_ENABLED)
 
-# Add external dependencies
-add_subdirectory(ext)
-
-add_library(libxbot-service STATIC
+add_library(xbot-service STATIC
         src/Service.cpp
         src/Lock.cpp
         src/RemoteLogging.cpp
@@ -26,12 +23,12 @@ else ()
 endif ()
 
 file(GLOB_RECURSE PORT_SOURCES ${XBOT_CUSTOM_PORT_PATH}/*.c ${XBOT_CUSTOM_PORT_PATH}/*.cpp ${XBOT_CUSTOM_PORT_PATH}/**/*.c ${XBOT_CUSTOM_PORT_PATH}/**/*.cpp)
-target_include_directories(libxbot-service PUBLIC ${XBOT_CUSTOM_PORT_PATH}/include)
-target_sources(libxbot-service PRIVATE ${PORT_SOURCES})
+target_include_directories(xbot-service PUBLIC ${XBOT_CUSTOM_PORT_PATH}/include)
+target_sources(xbot-service PRIVATE ${PORT_SOURCES})
 
 
-target_include_directories(libxbot-service PUBLIC include ${PROJECT_SOURCE_DIR}/../include)
-target_link_libraries(libxbot-service PUBLIC ulog etl)
-#set_property(TARGET libxbot-service PROPERTY CXX_STANDARD 23)
+target_include_directories(xbot-service PUBLIC include ${PROJECT_SOURCE_DIR}/../include)
+target_link_libraries(xbot-service PUBLIC ulog etl)
+#set_property(TARGET xbot-service PROPERTY CXX_STANDARD 23)
 
 #add_subdirectory(test)

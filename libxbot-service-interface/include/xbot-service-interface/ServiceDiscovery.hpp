@@ -4,14 +4,13 @@
 
 #ifndef SERVICEDISCOVERY_HPP
 #define SERVICEDISCOVERY_HPP
-#include <Socket.hpp>
 #include <map>
 #include <mutex>
 #include <thread>
 
 #include "data/ServiceInfo.hpp"
 
-namespace xbot::hub {
+namespace xbot::serviceif {
 
 class ServiceDiscoveryCallbacks {
  public:
@@ -45,8 +44,7 @@ class ServiceDiscovery {
 
   static bool Start();
 
-  static void RegisterCallbacks(
-      std::shared_ptr<ServiceDiscoveryCallbacks> callbacks);
+  static void RegisterCallbacks(ServiceDiscoveryCallbacks *callbacks);
 
   /**
    * Gets a copy of the ServiceInfo registered for this UID.
@@ -60,17 +58,14 @@ class ServiceDiscovery {
    */
   static std::unique_ptr<std::map<std::string, ServiceInfo>> GetAllSerivces();
 
- private:
-  static void Run();
-
-  static std::recursive_mutex sd_mutex_;
-  static std::map<std::string, ServiceInfo> discovered_services_;
-  static std::atomic_flag stopped_;
-  static std::thread sd_thread_;
-  static Socket sd_socket_;
-  static std::vector<std::shared_ptr<ServiceDiscoveryCallbacks>>
-      registered_callbacks_;
+  /**
+   * Drops a service from the ServiceDiscovery list.
+   * Use this, whenever a service times out in order to get re-notified
+   * when this service comes back up.
+   * @param uid The services unique ID
+   */
+  static bool DropService(const std::string &uid);
 };
-}  // namespace xbot::hub
+}  // namespace xbot::serviceif
 
 #endif  // SERVICEDISCOVERY_HPP

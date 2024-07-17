@@ -26,7 +26,7 @@ for include in service['additional_includes']:
 //[[[end]]]
 
 /*[[[cog
-cog.outl(f"class {service['class_name']} : public xbot::comms::Service {{")
+cog.outl(f"class {service['class_name']} : public xbot::comms::ServiceInterface {{")
 ]]]*/
 class ServiceTemplateBase : public xbot::comms::Service {
 //[[[end]]]

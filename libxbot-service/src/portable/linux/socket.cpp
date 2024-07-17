@@ -16,8 +16,8 @@
 
 #include "xbot/config.hpp"
 
-using namespace xbot::comms::sock;
-using namespace xbot::comms::packet;
+using namespace xbot::service::sock;
+using namespace xbot::service::packet;
 
 bool get_ip(char* ip, size_t ip_len) {
   int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -72,7 +72,8 @@ bool get_ip(char* ip, size_t ip_len) {
   return success;
 }
 
-bool xbot::comms::sock::initialize(SocketPtr socket_ptr, bool bind_multicast) {
+bool xbot::service::sock::initialize(SocketPtr socket_ptr,
+                                     bool bind_multicast) {
   *socket_ptr = -1;
   // Create a UDP socket
 
@@ -132,7 +133,7 @@ bool xbot::comms::sock::initialize(SocketPtr socket_ptr, bool bind_multicast) {
   return true;
 }
 
-void xbot::comms::sock::deinitialize(SocketPtr socket) {
+void xbot::service::sock::deinitialize(SocketPtr socket) {
   if (socket != nullptr) {
     auto fd_ptr = socket;
     close(*fd_ptr);
@@ -140,7 +141,7 @@ void xbot::comms::sock::deinitialize(SocketPtr socket) {
   }
 }
 
-bool xbot::comms::sock::subscribeMulticast(SocketPtr socket, const char* ip) {
+bool xbot::service::sock::subscribeMulticast(SocketPtr socket, const char* ip) {
   ip_mreq opt{};
   opt.imr_interface.s_addr = 0;
   opt.imr_multiaddr.s_addr = inet_addr(ip);
@@ -152,7 +153,7 @@ bool xbot::comms::sock::subscribeMulticast(SocketPtr socket, const char* ip) {
   return true;
 }
 
-bool xbot::comms::sock::receivePacket(SocketPtr socket, PacketPtr* packet) {
+bool xbot::service::sock::receivePacket(SocketPtr socket, PacketPtr* packet) {
   const PacketPtr pkt = allocatePacket();
   sockaddr_in fromAddr{};
   socklen_t fromLen = sizeof(fromAddr);
@@ -168,8 +169,8 @@ bool xbot::comms::sock::receivePacket(SocketPtr socket, PacketPtr* packet) {
   return true;
 }
 
-bool xbot::comms::sock::transmitPacket(SocketPtr socket, PacketPtr packet,
-                                       uint32_t ip, uint16_t port) {
+bool xbot::service::sock::transmitPacket(SocketPtr socket, PacketPtr packet,
+                                         uint32_t ip, uint16_t port) {
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
@@ -183,13 +184,13 @@ bool xbot::comms::sock::transmitPacket(SocketPtr socket, PacketPtr packet,
   return true;
 }
 
-bool xbot::comms::sock::transmitPacket(SocketPtr socket, PacketPtr packet,
-                                       const char* ip, uint16_t port) {
+bool xbot::service::sock::transmitPacket(SocketPtr socket, PacketPtr packet,
+                                         const char* ip, uint16_t port) {
   return transmitPacket(socket, packet, ntohl(inet_addr(ip)), port);
 }
 
-bool xbot::comms::sock::getEndpoint(SocketPtr socket, char* ip, size_t ip_len,
-                                    uint16_t* port) {
+bool xbot::service::sock::getEndpoint(SocketPtr socket, char* ip, size_t ip_len,
+                                      uint16_t* port) {
   if (socket == nullptr || ip == nullptr || port == nullptr) return false;
 
   sockaddr_in addr{};
@@ -217,7 +218,7 @@ bool xbot::comms::sock::getEndpoint(SocketPtr socket, char* ip, size_t ip_len,
   return true;
 }
 
-bool xbot::comms::sock::closeSocket(SocketPtr socket) {
+bool xbot::service::sock::closeSocket(SocketPtr socket) {
   if (socket == nullptr) return true;
   if (close(*socket) < 0) {
     return false;

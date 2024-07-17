@@ -8,7 +8,7 @@
 #include <portable/queue.hpp>
 #include <portable/socket.hpp>
 
-namespace xbot::comms {
+namespace xbot::service {
 /**
  * Interface for the Service IO.
  * This is its own class so that we don't get a circular dependency
@@ -41,6 +41,6 @@ class ServiceIo {
 
   bool ioInput(packet::PacketPtr packet);
 };
-}  // namespace xbot::comms
+}  // namespace xbot::service
 
 #endif  // PACKETHANDLER_H

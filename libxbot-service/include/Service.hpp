@@ -13,7 +13,7 @@
 #include "portable/thread.hpp"
 #include "xbot/datatypes/XbotHeader.hpp"
 
-namespace xbot::comms {
+namespace xbot::service {
 class Service : public ServiceIo {
  public:
   explicit Service(uint16_t service_id, uint32_t tick_rate_micros,
@@ -87,6 +87,6 @@ class Service : public ServiceIo {
   virtual bool handlePacket(const datatypes::XbotHeader *header,
                             const void *payload) = 0;
 };
-}  // namespace xbot::comms
+}  // namespace xbot::service
 
 #endif  // SERVICE_HPP

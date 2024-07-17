@@ -5,7 +5,6 @@
 #ifndef CROWTOSPEEDLOGHANDLER_HPP
 #define CROWTOSPEEDLOGHANDLER_HPP
 
-#include <crow.h>
 #include <spdlog/spdlog.h>
 
 namespace xbot::hub {

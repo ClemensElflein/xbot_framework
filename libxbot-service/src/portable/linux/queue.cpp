@@ -7,7 +7,7 @@
 #include <portable/queue.hpp>
 #include <queue>
 
-using namespace xbot::comms::queue;
+using namespace xbot::service::queue;
 
 bool BlockingQueue::init(size_t size, void* buffer, size_t buffer_size) {
   // We need at least one space in the queue
@@ -83,14 +83,14 @@ bool BlockingQueue::isEmpty() const { return item_count_ == 0; }
 
 bool BlockingQueue::isFull() const { return item_count_ == queue_size_; }
 
-bool xbot::comms::queue::initialize(QueuePtr queue, size_t queue_length,
-                                    void* buffer, size_t buffer_size) {
+bool xbot::service::queue::initialize(QueuePtr queue, size_t queue_length,
+                                      void* buffer, size_t buffer_size) {
   // create the queue on the heap, we don't need the buffer.
   return queue->init(queue_length, buffer, buffer_size);
 }
 
-bool xbot::comms::queue::queuePopItem(QueuePtr queue, void** result,
-                                      uint32_t timeout_micros) {
+bool xbot::service::queue::queuePopItem(QueuePtr queue, void** result,
+                                        uint32_t timeout_micros) {
   void* item = queue->pop(timeout_micros);
   if (item) {
     *result = item;
@@ -99,9 +99,9 @@ bool xbot::comms::queue::queuePopItem(QueuePtr queue, void** result,
   return false;
 }
 
-bool xbot::comms::queue::queuePushItem(QueuePtr queue, void* item) {
+bool xbot::service::queue::queuePushItem(QueuePtr queue, void* item) {
   if (queue == nullptr) return false;
   return queue->push(item, 0);
 }
 
-void xbot::comms::queue::deinitialize(QueuePtr queue) {}
+void xbot::service::queue::deinitialize(QueuePtr queue) {}

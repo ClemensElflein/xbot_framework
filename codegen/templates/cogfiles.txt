@@ -1,2 +1,4 @@
 ./ServiceTemplate.hpp
 ./ServiceTemplate.cpp
+./ServiceInterfaceTemplate.hpp
+./ServiceInterfaceTemplate.cpp

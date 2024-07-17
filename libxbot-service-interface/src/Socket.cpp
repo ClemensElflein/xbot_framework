@@ -2,19 +2,19 @@
 // Created by clemens on 4/29/24.
 //
 
-#include "Socket.hpp"
-
 #include <arpa/inet.h>
 #include <net/if.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include <cstring>
+#include <string>
 #include <utility>
+#include <xbot-service-interface/Socket.hpp>
 #include <xbot/config.hpp>
-
-using namespace xbot::hub;
+using namespace xbot::serviceif;
 
 bool get_ip(std::string &ip) {
   int fd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -162,6 +162,23 @@ bool Socket::TransmitPacket(uint32_t ip, uint16_t port,
 bool Socket::TransmitPacket(std::string ip, uint16_t port,
                             const std::vector<uint8_t> &data) const {
   return TransmitPacket(ntohl(inet_addr(ip.c_str())), port, data);
+}
+bool Socket::TransmitPacket(uint32_t ip, uint16_t port, const uint8_t *data,
+                            size_t buflen) const {
+  if (fd_ == -1) return false;
+  sockaddr_in addr{};
+  addr.sin_family = AF_INET;
+  addr.sin_port = htons(port);
+  addr.sin_addr.s_addr = htonl(ip);
+
+  sendto(fd_, data, buflen, 0, reinterpret_cast<const sockaddr *>(&addr),
+         sizeof(addr));
+
+  return true;
+}
+bool Socket::TransmitPacket(std::string ip, uint16_t port, const uint8_t *data,
+                            size_t buflen) const {
+  return TransmitPacket(ntohl(inet_addr(ip.c_str())), port, data, buflen);
 }
 
 bool Socket::GetEndpoint(std::string &ip, uint16_t &port) const {

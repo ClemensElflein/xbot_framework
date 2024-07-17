@@ -6,7 +6,7 @@
 #include <portable/thread.hpp>
 #include <xbot/datatypes/XbotHeader.hpp>
 
-namespace xbot::comms {
+namespace xbot::service {
 
 // Keep track of the first registered service.
 // All services have a pointer to the next one, so we can loop through all
@@ -79,4 +79,4 @@ bool Io::start() {
   return thread::initialize(&io_thread_, runIo, nullptr, nullptr, 0);
 }
 
-}  // namespace xbot::comms
+}  // namespace xbot::service

@@ -5,7 +5,7 @@
 #ifndef IO_H
 #define IO_H
 #include <ServiceIo.h>
-namespace xbot::comms {
+namespace xbot::service {
 class Io {
  public:
   // Register a new service for IO.
@@ -14,6 +14,6 @@ class Io {
 
   static bool start();
 };
-}  // namespace xbot::comms
+}  // namespace xbot::service
 
 #endif  // IO_H

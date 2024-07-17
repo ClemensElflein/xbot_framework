@@ -7,7 +7,7 @@
 
 #include <condition_variable>
 
-namespace xbot::comms::queue {
+namespace xbot::service::queue {
 // Simple blocking queue implementation
 class BlockingQueue {
  public:
@@ -44,8 +44,8 @@ class BlockingQueue {
   std::condition_variable cv_pop_{};
 };
 
-}  // namespace xbot::comms::queue
+}  // namespace xbot::service::queue
 
-#define XBOT_QUEUE_TYPEDEF xbot::comms::queue::BlockingQueue
+#define XBOT_QUEUE_TYPEDEF xbot::service::queue::BlockingQueue
 
 #endif  // QUEUE_IMPL_HPP

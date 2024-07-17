@@ -1,25 +1,24 @@
-#include <Socket.hpp>
-#include <nlohmann/json.hpp>
+
+#include <crow.h>
+#include <spdlog/spdlog.h>
 
 #include "CrowToSpeedlogHandler.hpp"
-#include "ServiceDiscovery.hpp"
-#include "ServiceInterfaceFactory.hpp"
-#include "crow.h"
-#include "endpoint_utils.hpp"
+#include "PlotJugglerBridge.hpp"
 
-using namespace xbot;
+using namespace xbot::serviceif;
 
 int main() {
   hub::CrowToSpeedlogHandler logger;
   crow::logger::setHandler(&logger);
 
-  // Register the interface factory before starting service discovery
-  // this way, whenever a service is found, the appropriate interface is built
-  // automatically.
-  hub::ServiceDiscovery::RegisterCallbacks(
-      hub::ServiceInterfaceFactory::GetInstance());
-  hub::ServiceInterfaceFactory::Start();
-  hub::ServiceDiscovery::Start();
+  // Register the ServiceIO before starting service discovery
+  // this way, whenever a service is found, ServiceIO claims it automatically
+  ServiceDiscovery::RegisterCallbacks(ServiceIO::GetInstance());
+
+  PlotJugglerBridge pjb;
+
+  ServiceIO::Start();
+  ServiceDiscovery::Start();
 
   crow::SimpleApp app;
 
@@ -27,7 +26,7 @@ int main() {
   CROW_ROUTE(app, "/services")
   ([]() {
     nlohmann::json result = nlohmann::detail::value_t::object;
-    const auto services = hub::ServiceDiscovery::GetAllSerivces();
+    const auto services = ServiceDiscovery::GetAllSerivces();
 
     for (const auto &s : *services) {
       result[s.first] = s.second;

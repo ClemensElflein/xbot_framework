@@ -6,7 +6,7 @@
 
 #include <xbot/datatypes/XbotHeader.hpp>
 
-namespace xbot::comms {
+namespace xbot::service {
 
 ServiceIo::ServiceIo(uint32_t service_id)
     : service_id_(service_id), next_service_(nullptr) {}
@@ -43,4 +43,4 @@ bool ServiceIo::ioInput(packet::PacketPtr packet) {
   }
   return true;
 }
-}  // namespace xbot::comms
+}  // namespace xbot::service

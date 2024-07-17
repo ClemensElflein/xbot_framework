@@ -3,8 +3,8 @@
 //
 #include "Lock.hpp"
 
-xbot::comms::Lock::Lock(mutex::MutexPtr mutex) : mutex_(mutex) {
+xbot::service::Lock::Lock(mutex::MutexPtr mutex) : mutex_(mutex) {
   mutex::lockMutex(mutex_);
 }
 
-xbot::comms::Lock::~Lock() { mutex::unlockMutex(mutex_); }
+xbot::service::Lock::~Lock() { mutex::unlockMutex(mutex_); }

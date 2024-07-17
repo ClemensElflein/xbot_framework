@@ -9,7 +9,7 @@
 #include <xbot/config.hpp>
 #include <xbot/datatypes/XbotHeader.hpp>
 
-namespace xbot::comms::datatypes {
+namespace xbot::datatypes {
 
 #pragma pack(push, 1)
 struct ClaimPayload {
@@ -22,6 +22,6 @@ struct ClaimPayload {
   uint32_t heartbeat_micros{};
 } __attribute__((packed));
 #pragma pack(pop)
-}  // namespace xbot::comms::datatypes
+}  // namespace xbot::datatypes
 
 #endif  // LOGPAYLOAD_HPP

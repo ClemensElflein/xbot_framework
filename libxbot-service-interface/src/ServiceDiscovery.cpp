@@ -2,24 +2,26 @@
 // Created by clemens on 4/29/24.
 //
 
-#include "ServiceDiscovery.hpp"
-
 #include <mutex>
 #include <nlohmann/json.hpp>
+#include <xbot-service-interface/ServiceDiscovery.hpp>
+#include <xbot-service-interface/Socket.hpp>
+#include <xbot-service-interface/data/ServiceInfo.hpp>
 #include <xbot/config.hpp>
 #include <xbot/datatypes/XbotHeader.hpp>
 
-#include "endpoint_utils.hpp"
 #include "spdlog/spdlog.h"
 
-namespace xbot::hub {
-Socket ServiceDiscovery::sd_socket_{"0.0.0.0", config::multicast_port};
-std::thread ServiceDiscovery::sd_thread_{};
-std::atomic_flag ServiceDiscovery::stopped_{false};
-std::recursive_mutex ServiceDiscovery::sd_mutex_{};
-std::map<std::string, ServiceInfo> ServiceDiscovery::discovered_services_{};
-std::vector<std::shared_ptr<ServiceDiscoveryCallbacks>>
-    ServiceDiscovery::registered_callbacks_{};
+namespace xbot::serviceif {
+
+static void Run();
+
+std::recursive_mutex sd_mutex_{};
+std::map<std::string, ServiceInfo> discovered_services_{};
+std::atomic_flag stopped_{false};
+std::thread sd_thread_{};
+Socket sd_socket_{"0.0.0.0", config::multicast_port};
+std::vector<ServiceDiscoveryCallbacks *> registered_callbacks_{};
 
 bool ServiceDiscovery::GetEndpoint(const std::string &uid, uint32_t &ip,
                                    uint16_t &port) {
@@ -46,8 +48,7 @@ bool ServiceDiscovery::Start() {
   return true;
 }
 
-void ServiceDiscovery::RegisterCallbacks(
-    std::shared_ptr<ServiceDiscoveryCallbacks> callbacks) {
+void ServiceDiscovery::RegisterCallbacks(ServiceDiscoveryCallbacks *callbacks) {
   if (callbacks == nullptr) {
     return;
   }
@@ -70,8 +71,12 @@ ServiceDiscovery::GetAllSerivces() {
   return std::make_unique<std::map<std::string, ServiceInfo>>(
       discovered_services_);
 }
+bool ServiceDiscovery::DropService(const std::string &uid) {
+  std::unique_lock lk(sd_mutex_);
+  return discovered_services_.erase(uid) > 0;
+}
 
-void ServiceDiscovery::Run() {
+void Run() {
   std::vector<uint8_t> packet{};
   uint32_t sender_ip;
   uint16_t sender_port;
@@ -80,12 +85,12 @@ void ServiceDiscovery::Run() {
     // Try receive a packet, this will return false on timeout.
     if (sd_socket_.ReceivePacket(sender_ip, sender_port, packet)) {
       // Check, if packet has at least enough space for our header
-      if (packet.size() >= sizeof(comms::datatypes::XbotHeader)) {
+      if (packet.size() >= sizeof(datatypes::XbotHeader)) {
         const auto header =
-            reinterpret_cast<comms::datatypes::XbotHeader *>(packet.data());
+            reinterpret_cast<datatypes::XbotHeader *>(packet.data());
 
         if (header->message_type !=
-            comms::datatypes::MessageType::SERVICE_ADVERTISEMENT) {
+            datatypes::MessageType::SERVICE_ADVERTISEMENT) {
           spdlog::warn(
               "Service Discovery socket got non-service discovery message");
           continue;
@@ -93,11 +98,10 @@ void ServiceDiscovery::Run() {
 
         // Validate reported length
         if (packet.size() ==
-            header->payload_size + sizeof(comms::datatypes::XbotHeader)) {
+            header->payload_size + sizeof(datatypes::XbotHeader)) {
           try {
             const auto json = nlohmann::json::from_cbor(
-                packet.begin() + sizeof(comms::datatypes::XbotHeader),
-                packet.end());
+                packet.begin() + sizeof(datatypes::XbotHeader), packet.end());
 
             // Build the ServiceInfo object from the received data.
             ServiceInfo info = json;
@@ -160,4 +164,4 @@ void ServiceDiscovery::Run() {
     }
   }
 }
-}  // namespace xbot::hub
+}  // namespace xbot::serviceif

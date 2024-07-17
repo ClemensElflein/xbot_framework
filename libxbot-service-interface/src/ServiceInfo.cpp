@@ -2,13 +2,12 @@
 // Created by clemens on 4/30/24.
 //
 
-#include "ServiceInfo.hpp"
-
 #include <cstring>
 #include <iomanip>
 #include <string>
+#include <xbot-service-interface/data/ServiceInfo.hpp>
 
-using namespace xbot::hub;
+using namespace xbot::serviceif;
 
 void ServiceInfo::UpdateID() {
   std::stringstream stream;

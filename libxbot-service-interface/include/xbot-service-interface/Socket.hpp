@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace xbot::hub {
+namespace xbot::serviceif {
 class Socket {
  public:
   /**
@@ -67,6 +67,28 @@ class Socket {
    */
   bool TransmitPacket(std::string ip, uint16_t port,
                       const std::vector<uint8_t> &data) const;
+  /**
+   * Call to transmit data
+   * @param ip IP to send the data to. IP in host byte order. Use to avoid
+   * string parsing.
+   * @param port The Port to send the data to.
+   * @param data The data to send
+   * @param buflen The length of the data buffer
+   * @return true on success
+   */
+  bool TransmitPacket(uint32_t ip, uint16_t port, const uint8_t *data,
+                      size_t buflen) const;
+
+  /**
+   * Call to transmit data
+   * @param ip IP to send the data to.
+   * @param port The Port to send the data to.
+   * @param data The data to send
+   * @param buflen The length of the data buffer
+   * @return true on success
+   */
+  bool TransmitPacket(std::string ip, uint16_t port, const uint8_t *data,
+                      size_t buflen) const;
 
   /**
    * Get the endpoint (IP / port) where this socket is reachable.
@@ -93,6 +115,6 @@ class Socket {
   std::string bind_ip_;
   uint16_t bind_port_;
 };
-}  // namespace xbot::hub
+}  // namespace xbot::serviceif
 
 #endif  // SOCKET_HPP

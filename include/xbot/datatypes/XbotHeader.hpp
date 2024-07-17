@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-namespace xbot::comms::datatypes {
+namespace xbot::datatypes {
 enum class MessageType : uint8_t {
   // First bit 0, the payload is "raw".
   // Use for simple, but frequent messages (e.g. sensor data, ack messages,
@@ -60,6 +60,6 @@ struct XbotHeader {
 } __attribute__((packed));
 #pragma pack(pop)
 
-}  // namespace xbot::comms::datatypes
+}  // namespace xbot::datatypes
 
 #endif  // HEADER_HPP

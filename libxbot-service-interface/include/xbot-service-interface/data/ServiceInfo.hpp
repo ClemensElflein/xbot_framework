@@ -4,16 +4,14 @@
 
 #ifndef SERVICEINFO_HPP
 #define SERVICEINFO_HPP
-#include <cstring>
+
 #include <nlohmann/json.hpp>
 #include <string>
-#include <vector>
+#include <xbot-service-interface/endpoint_utils.hpp>
 
 #include "ServiceDescription.hpp"
-#include "ServiceInputInfo.hpp"
-#include "endpoint_utils.hpp"
 
-namespace xbot::hub {
+namespace xbot::serviceif {
 struct ServiceInfo {
  public:
   ServiceInfo() = default;
@@ -31,9 +29,6 @@ struct ServiceInfo {
   uint16_t port{};
 
   ServiceDescription description{};
-
-  // Inputs for this service
-  std::vector<ServiceInputInfo> inputs_{};
 
   // Constructs the ID from the member variables
   void UpdateID();
@@ -58,6 +53,6 @@ inline void from_json(const nlohmann::json &j, ServiceInfo &p) {
   p.UpdateID();
 }
 
-}  // namespace xbot::hub
+}  // namespace xbot::serviceif
 
 #endif  // SERVICEINFO_HPP

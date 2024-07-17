@@ -10,7 +10,7 @@
 #include <cstdint>
 #include <string>
 
-namespace xbot::hub {
+namespace xbot::serviceif {
 inline uint32_t IpStringToInt(const std::string& ip_string) {
   uint32_t ip = 0xFFFFFFFF;
   inet_pton(AF_INET, ip_string.c_str(), &ip);
@@ -27,6 +27,6 @@ inline std::string IpIntToString(const uint32_t ip) {
 inline std::string EndpointIntToString(const uint32_t ip, const uint16_t port) {
   return IpIntToString(ip) + ":" + std::to_string(port);
 }
-}  // namespace xbot::hub
+}  // namespace xbot::serviceif
 
 #endif  // ENDPOINT_UTILS_HPP

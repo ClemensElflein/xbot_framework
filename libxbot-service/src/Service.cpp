@@ -11,22 +11,22 @@
 #include "Lock.hpp"
 #include "portable/system.hpp"
 
-xbot::comms::Service::Service(uint16_t service_id, uint32_t tick_rate_micros,
-                              void *processing_thread_stack,
-                              size_t processing_thread_stack_size)
+xbot::service::Service::Service(uint16_t service_id, uint32_t tick_rate_micros,
+                                void *processing_thread_stack,
+                                size_t processing_thread_stack_size)
     : ServiceIo(service_id),
       scratch_buffer{},
       processing_thread_stack_(processing_thread_stack),
       processing_thread_stack_size_(processing_thread_stack_size),
       tick_rate_micros_(tick_rate_micros) {}
 
-xbot::comms::Service::~Service() {
+xbot::service::Service::~Service() {
   sock::deinitialize(&udp_socket_);
   mutex::deinitialize(&state_mutex_);
   thread::deinitialize(&process_thread_);
 }
 
-bool xbot::comms::Service::start() {
+bool xbot::service::Service::start() {
   stopped = false;
 
   // Set reboot flag
@@ -54,8 +54,8 @@ bool xbot::comms::Service::start() {
   return true;
 }
 
-bool xbot::comms::Service::SendData(uint16_t target_id, const void *data,
-                                    size_t size) {
+bool xbot::service::Service::SendData(uint16_t target_id, const void *data,
+                                      size_t size) {
   if (target_ip == 0 || target_port == 0) {
     ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
     return false;
@@ -72,7 +72,7 @@ bool xbot::comms::Service::SendData(uint16_t target_id, const void *data,
   return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
 
-bool xbot::comms::Service::SendDataClaimAck() {
+bool xbot::service::Service::SendDataClaimAck() {
   if (target_ip == 0 || target_port == 0) {
     ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
     return false;
@@ -88,7 +88,7 @@ bool xbot::comms::Service::SendDataClaimAck() {
   return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
 
-void xbot::comms::Service::fillHeader() {
+void xbot::service::Service::fillHeader() {
   header_.message_type = datatypes::MessageType::UNKNOWN;
   header_.payload_size = 0;
   header_.protocol_version = 1;
@@ -102,7 +102,7 @@ void xbot::comms::Service::fillHeader() {
   header_.timestamp = system::getTimeMicros();
 }
 
-void xbot::comms::Service::heartbeat() {
+void xbot::service::Service::heartbeat() {
   if (target_ip == 0 || target_port == 0) {
     last_heartbeat_micros_ = system::getTimeMicros();
     return;
@@ -119,7 +119,7 @@ void xbot::comms::Service::heartbeat() {
   last_heartbeat_micros_ = system::getTimeMicros();
 }
 
-void xbot::comms::Service::runProcessing() {
+void xbot::service::Service::runProcessing() {
   // Check, if we should stop
   {
     Lock lk(&state_mutex_);

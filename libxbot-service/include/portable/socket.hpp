@@ -13,7 +13,7 @@
 #error XBOT_SOCKET_TYPEDEF undefined
 #endif
 
-namespace xbot::comms::sock {
+namespace xbot::service::sock {
 typedef XBOT_SOCKET_TYPEDEF* SocketPtr;
 
 /**
@@ -79,6 +79,6 @@ bool closeSocket(SocketPtr socket);
  * @return true, on success.
  */
 bool getEndpoint(SocketPtr socket, char* ip, size_t ip_len, uint16_t* port);
-}  // namespace xbot::comms::sock
+}  // namespace xbot::service::sock
 
 #endif  // SOCKET_HPP

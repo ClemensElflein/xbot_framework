@@ -14,13 +14,14 @@
 #include "xbot/datatypes/LogPayload.hpp"
 #include "xbot/datatypes/XbotHeader.hpp"
 
-using namespace xbot::comms;
+using namespace xbot::service;
+using namespace xbot::datatypes;
 
 XBOT_MUTEX_TYPEDEF logging_mutex{};
 XBOT_SOCKET_TYPEDEF logging_socket{};
 uint8_t log_packet_buffer[xbot::config::max_packet_size];
 
-datatypes::XbotHeader log_message_header{};
+XbotHeader log_message_header{};
 
 uint16_t log_sequence_no = 0;
 
@@ -29,7 +30,7 @@ void remote_logger(ulog_level_t severity, char* msg, const void* args) {
 
   // Packet Header
   log_message_header.protocol_version = 0;
-  log_message_header.message_type = datatypes::MessageType::LOG;
+  log_message_header.message_type = MessageType::LOG;
   log_message_header.flags = 0;
 
   log_message_header.arg1 = (severity - ULOG_TRACE_LEVEL + 1);

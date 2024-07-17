@@ -9,7 +9,7 @@
 #include <xbot/config.hpp>
 #include <xbot/datatypes/XbotHeader.hpp>
 
-namespace xbot::comms::datatypes {
+namespace xbot::datatypes {
 enum class LogLevel : uint8_t {
   UNKNOWN_LEVEL = 0,
   TRACE_LEVEL,

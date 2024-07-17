@@ -10,7 +10,7 @@
 #error XBOT_PACKET_TYPEDEF undefined
 #endif
 
-namespace xbot::comms::packet {
+namespace xbot::service::packet {
 
 typedef XBOT_PACKET_TYPEDEF* PacketPtr;
 
@@ -37,6 +37,6 @@ bool packetAppendData(PacketPtr packet, const void* buffer, size_t size);
 
 bool packetGetData(PacketPtr packet, void** buffer, size_t* size);
 
-}  // namespace xbot::comms::packet
+}  // namespace xbot::service::packet
 
 #endif  // PACKET_HPP

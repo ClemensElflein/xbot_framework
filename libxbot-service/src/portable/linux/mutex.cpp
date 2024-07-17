@@ -4,17 +4,17 @@
 #include <mutex>
 #include <portable/mutex.hpp>
 
-using namespace xbot::comms::mutex;
+using namespace xbot::service::mutex;
 
-bool xbot::comms::mutex::initialize(MutexPtr mutex) {
+bool xbot::service::mutex::initialize(MutexPtr mutex) {
   // nothing to initialize
   return true;
 }
 
-void xbot::comms::mutex::deinitialize(MutexPtr mutex) {
+void xbot::service::mutex::deinitialize(MutexPtr mutex) {
   // nothing to uninitialize
 }
 
-void xbot::comms::mutex::lockMutex(MutexPtr mutex) { mutex->lock(); }
+void xbot::service::mutex::lockMutex(MutexPtr mutex) { mutex->lock(); }
 
-void xbot::comms::mutex::unlockMutex(MutexPtr mutex) { mutex->unlock(); }
+void xbot::service::mutex::unlockMutex(MutexPtr mutex) { mutex->unlock(); }
