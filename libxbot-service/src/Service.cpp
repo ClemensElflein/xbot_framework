@@ -4,6 +4,7 @@
 #include <ulog.h>
 
 #include <algorithm>
+#include <cstring>
 #include <xbot-service/Io.hpp>
 #include <xbot-service/Lock.hpp>
 #include <xbot-service/Service.hpp>
@@ -55,6 +56,27 @@ bool xbot::service::Service::start() {
 
 bool xbot::service::Service::SendData(uint16_t target_id, const void *data,
                                       size_t size) {
+  if (transaction_started_) {
+    // We are using a transaction, append the data
+    if (scratch_buffer_fill_ + size + sizeof(datatypes::DataDescriptor) <=
+        sizeof(scratch_buffer)) {
+      // add the size to the header
+      // we can fit the data, write descriptor and data
+      auto descriptor_ptr = reinterpret_cast<datatypes::DataDescriptor *>(
+          scratch_buffer + scratch_buffer_fill_);
+      auto data_target_ptr = (scratch_buffer + scratch_buffer_fill_ +
+                              sizeof(datatypes::DataDescriptor));
+      descriptor_ptr->payload_size = size;
+      descriptor_ptr->reserved = 0;
+      descriptor_ptr->target_id = target_id;
+      memcpy(data_target_ptr, data, size);
+      scratch_buffer_fill_ += size + sizeof(datatypes::DataDescriptor);
+      return true;
+    } else {
+      // TODO: send the current packet and create a new one.
+      return false;
+    }
+  }
   if (target_ip == 0 || target_port == 0) {
     ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
     return false;
@@ -84,6 +106,34 @@ bool xbot::service::Service::SendDataClaimAck() {
   // Send header and data
   packet::PacketPtr ptr = packet::allocatePacket();
   packet::packetAppendData(ptr, &header_, sizeof(header_));
+  return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
+}
+bool xbot::service::Service::StartTransaction(uint64_t timestamp) {
+  if (transaction_started_) {
+    return false;
+  }
+  fillHeader();
+  // If the user has provided a timestamp for the data, set it here.
+  if (timestamp) {
+    header_.timestamp = timestamp;
+  }
+  scratch_buffer_fill_ = 0;
+  transaction_started_ = true;
+  return true;
+}
+bool xbot::service::Service::CommitTransaction() {
+  transaction_started_ = false;
+  if (target_ip == 0 || target_port == 0) {
+    ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
+    return false;
+  }
+  header_.message_type = datatypes::MessageType::TRANSACTION;
+  header_.payload_size = scratch_buffer_fill_;
+
+  // Send header and data
+  packet::PacketPtr ptr = packet::allocatePacket();
+  packet::packetAppendData(ptr, &header_, sizeof(header_));
+  packet::packetAppendData(ptr, scratch_buffer, scratch_buffer_fill_);
   return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
 

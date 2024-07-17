@@ -76,8 +76,6 @@ def loadService(path: str) -> dict:
         else:
             # Not an array type
             type = json_input["type"]
-            if type not in raw_encoding_valid_types:
-                raise Exception(f"Illegal data type: {type}!")
             if json_input.get("encoding") == "zcbor":
                 # Add additional include for the decoder
                 include_name = f"<{json_input['type']}_decode.h>"
@@ -93,6 +91,8 @@ def loadService(path: str) -> dict:
                                        "    }\n"
                                        "}"
                                        )
+            elif type not in raw_encoding_valid_types:
+                raise Exception(f"Illegal data type: {type}!")
             input = {
                 "id": input_id,
                 "name": input_name,
@@ -131,6 +131,7 @@ def loadService(path: str) -> dict:
             }
         else:
             # Not an array type
+            type = json_output["type"]
             if json_output.get("encoding") == "zcbor":
                 # Add additional include for the decoder
                 include_name = f"<{json_output['type']}_encode.h>"
@@ -146,8 +147,7 @@ def loadService(path: str) -> dict:
                                        "    }\n"
                                        "}"
                                        )
-            type = json_output["type"]
-            if type not in raw_encoding_valid_types:
+            elif type not in raw_encoding_valid_types:
                 raise Exception(f"Illegal data type: {type}!")
             output = {
                 "id": output_id,

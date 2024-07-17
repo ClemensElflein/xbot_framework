@@ -14,9 +14,9 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <portable/system.hpp>
+#include <xbot-service/portable/system.hpp>
 
-#include "portable/mutex.hpp"
+#include "xbot-service/portable/mutex.hpp"
 
 namespace xbot::service::system {
 XBOT_MUTEX_TYPEDEF ulog_mutex_;

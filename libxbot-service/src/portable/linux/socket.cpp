@@ -12,7 +12,7 @@
 
 #include <cstdio>
 #include <cstring>
-#include <portable/socket.hpp>
+#include <xbot-service/portable/socket.hpp>
 
 #include "xbot/config.hpp"
 

@@ -4,7 +4,7 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <portable/packet.hpp>
+#include <xbot-service/portable/packet.hpp>
 #include <xbot/config.hpp>
 
 using namespace xbot::service::packet;

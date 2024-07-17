@@ -1,9 +1,9 @@
 //
 // Created by clemens on 7/14/24.
 //
-#include <Io.hpp>
-#include <Lock.hpp>
-#include <portable/thread.hpp>
+#include <xbot-service/Io.hpp>
+#include <xbot-service/Lock.hpp>
+#include <xbot-service/portable/thread.hpp>
 #include <xbot/datatypes/XbotHeader.hpp>
 
 namespace xbot::service {

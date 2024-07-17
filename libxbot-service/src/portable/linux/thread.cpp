@@ -1,6 +1,6 @@
 #include <pthread.h>
 
-#include <portable/thread.hpp>
+#include <xbot-service/portable/thread.hpp>
 
 using namespace xbot::service::thread;
 

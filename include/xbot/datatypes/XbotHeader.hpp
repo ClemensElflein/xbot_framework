@@ -22,6 +22,9 @@ enum class MessageType : uint8_t {
   CLAIM = 0x03,
   // Heartbeat is sent regularly by service to show that its alive
   HEARTBEAT = 0x04,
+  // Transaction bundles multiple data IOs separated with
+  // DataDescriptor headers.
+  TRANSACTION = 0x05,
   // For remote debug logging
   LOG = 0x7F,
   // First bit 1, the payload is JSON encoded.
@@ -54,8 +57,19 @@ struct XbotHeader {
   // have until year 2554 before it rolls over.
   uint64_t timestamp{};
   // Length of payload in bytes. Especially important for "raw" messages.
-  // Also this allows us to chain multiple xBot packets into a single UDP packet
-  // in the future.
+  // Also this allows us to chain multiple xBot packets into a single UDP
+  // packet.
+  uint32_t payload_size{};
+} __attribute__((packed));
+#pragma pack(pop)
+
+#pragma pack(push, 1)
+struct DataDescriptor {
+  // Target ID for the next piece of data
+  uint16_t target_id{};
+  // Reserved for alignment and future use
+  uint16_t reserved{};
+  // Length of next payload in bytes.
   uint32_t payload_size{};
 } __attribute__((packed));
 #pragma pack(pop)

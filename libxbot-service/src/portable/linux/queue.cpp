@@ -4,8 +4,8 @@
 #include <cassert>
 #include <condition_variable>
 #include <mutex>
-#include <portable/queue.hpp>
 #include <queue>
+#include <xbot-service/portable/queue.hpp>
 
 using namespace xbot::service::queue;
 

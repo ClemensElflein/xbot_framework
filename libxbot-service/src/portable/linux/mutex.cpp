@@ -2,7 +2,7 @@
 // Created by clemens on 3/20/24.
 //
 #include <mutex>
-#include <portable/mutex.hpp>
+#include <xbot-service/portable/mutex.hpp>
 
 using namespace xbot::service::mutex;
 

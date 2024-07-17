@@ -44,9 +44,15 @@ class Service : public ServiceIo {
 
  protected:
   // Buffer to serialize service announcements and also custom serialized data
-  // (zcbor)
+  // (zcbor) or transactions.
   uint8_t
       scratch_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)];
+
+  // Track how much of the scratch_buffer is already full
+  size_t scratch_buffer_fill_ = 0;
+
+  // Track, if we have already started a transaction
+  bool transaction_started_ = false;
 
   // Scratch space for the header. This will only ever be accessed in the
   // process_thread, so we don't need a mutex Don't make it static, so that
@@ -54,6 +60,10 @@ class Service : public ServiceIo {
   datatypes::XbotHeader header_{};
 
   bool SendData(uint16_t target_id, const void *data, size_t size);
+
+  bool StartTransaction(uint64_t timestamp = 0);
+
+  bool CommitTransaction();
 
  private:
   /**

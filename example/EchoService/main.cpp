@@ -3,13 +3,13 @@
 #include <ulog.h>
 #include <unistd.h>
 
-#include <Io.hpp>
 #include <cstdio>
 #include <mutex>
+#include <xbot-service/Io.hpp>
 
 #include "EchoService.hpp"
-#include "RemoteLogging.hpp"
-#include "portable/system.hpp"
+#include "xbot-service/RemoteLogging.hpp"
+#include "xbot-service/portable/system.hpp"
 
 #ifdef ULOG_ENABLED
 void console_logger(ulog_level_t severity, char* msg, const void* arg) {
@@ -40,7 +40,7 @@ int main() {
     printf("Encoding failed for pet3: %d\r\n", err);
   }
 
-  xbot::comms::system::initSystem();
+  xbot::service::system::initSystem();
 #ifdef ULOG_ENABLED
   ULOG_SUBSCRIBE(console_logger, ULOG_DEBUG_LEVEL);
 #endif
@@ -50,7 +50,7 @@ int main() {
 
   service.start();
 
-  xbot::comms::Io::start();
+  xbot::service::Io::start();
 
   while (1) {
     sleep(1);
