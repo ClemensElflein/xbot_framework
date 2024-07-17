@@ -1,6 +1,20 @@
 import json
 import cbor2
 
+# Supported types for raw encoding
+# we can also encode arrays of these basic types.
+raw_encoding_valid_types = [
+    "char",
+    "uint8_t",
+    "uint16_t",
+    "uint32_t",
+    "int8_t",
+    "int16_t",
+    "int32_t",
+    "float",
+    "double",
+]
+
 
 # Convert a binary string to a value we can use in our header file.
 def binary2c_array(data):
@@ -48,7 +62,7 @@ def loadService(path: str) -> dict:
             # Split the type definition at the [, validate and get max length
             type, _, rest = json_input["type"].rpartition("[")
             # Rest needs to end with "]", it needs to be something like 123]
-            if not rest.endswith("]"):
+            if not rest.endswith("]") or type not in raw_encoding_valid_types:
                 raise Exception(f"Illegal data type: {type}!")
             max_length = int(rest.replace("]", ""))
             input = {
@@ -62,6 +76,8 @@ def loadService(path: str) -> dict:
         else:
             # Not an array type
             type = json_input["type"]
+            if type not in raw_encoding_valid_types:
+                raise Exception(f"Illegal data type: {type}!")
             if json_input.get("encoding") == "zcbor":
                 # Add additional include for the decoder
                 include_name = f"<{json_input['type']}_decode.h>"
@@ -102,7 +118,7 @@ def loadService(path: str) -> dict:
             # Split the type definition at the [, validate and get max length
             type, _, rest = json_output["type"].rpartition("[")
             # Rest needs to end with "]", it needs to be something like 123]
-            if not rest.endswith("]"):
+            if not rest.endswith("]") or type not in raw_encoding_valid_types:
                 raise Exception(f"Illegal data type: {type}!")
             max_length = int(rest.replace("]", ""))
             output = {
@@ -131,6 +147,8 @@ def loadService(path: str) -> dict:
                                        "}"
                                        )
             type = json_output["type"]
+            if type not in raw_encoding_valid_types:
+                raise Exception(f"Illegal data type: {type}!")
             output = {
                 "id": output_id,
                 "name": output_name,
