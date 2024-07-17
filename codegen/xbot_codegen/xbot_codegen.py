@@ -77,6 +77,9 @@ def loadService(path: str) -> dict:
             # Not an array type
             type = json_input["type"]
             if json_input.get("encoding") == "zcbor":
+                # Add common header
+                if "<zcbor_common.h>" not in additional_includes:
+                    additional_includes.append("<zcbor_common.h>")
                 # Add additional include for the decoder
                 include_name = f"<{json_input['type']}_decode.h>"
                 if include_name not in additional_includes:
@@ -133,6 +136,9 @@ def loadService(path: str) -> dict:
             # Not an array type
             type = json_output["type"]
             if json_output.get("encoding") == "zcbor":
+                # Add common header
+                if "<zcbor_common.h>" not in additional_includes:
+                    additional_includes.append("<zcbor_common.h>")
                 # Add additional include for the decoder
                 include_name = f"<{json_output['type']}_encode.h>"
                 if include_name not in additional_includes:
