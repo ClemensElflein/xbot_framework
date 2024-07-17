@@ -5,6 +5,8 @@
 #include <xbot-service-interface/ServiceInterfaceBase.hpp>
 
 #include "spdlog/spdlog.h"
+using namespace xbot::serviceif;
+
 ServiceInterfaceBase::ServiceInterfaceBase(uint16_t service_id,
                                            std::string type, uint32_t version)
     : service_id_(service_id), type_(std::move(type)), version_(version) {}

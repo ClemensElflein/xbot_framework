@@ -2,40 +2,80 @@
 #include <crow.h>
 #include <spdlog/spdlog.h>
 
+#include <EchoServiceInterfaceBase.hpp>
+
 #include "CrowToSpeedlogHandler.hpp"
 #include "PlotJugglerBridge.hpp"
 #include "xbot-service-interface/ServiceInterfaceBase.hpp"
 
 using namespace xbot::serviceif;
 
-class EchoServiceInterface : public ServiceInterfaceBase {
+std::mutex m;
+std::condition_variable cond_var;
+std::string last_echo{};
+
+int timeout = 0;
+int error = 0;
+int ok = 0;
+
+class EchoServiceInterface : public EchoServiceInterfaceBase {
  public:
   explicit EchoServiceInterface(uint16_t service_id)
-      : ServiceInterfaceBase(service_id, "EchoService", 1) {}
+      : EchoServiceInterfaceBase(service_id) {}
 
-  int i = 0;
-  void SendSomething() {
-    StartTransaction();
-    i++;
-    std::string text = "this is a test " + std::to_string(i);
-    SendData(0, text.c_str(), text.length());
-    uint32_t j = i;
-    SendData(1, &j, sizeof(j));
-    CommitTransaction();
+ protected:
+  void OnEchoChanged(const char *new_value, uint32_t length) override {
+    std::string e = std::string(new_value, length);
+    // spdlog::info("Got echo {}", e);
+    if (e.starts_with("this is a test message ")) {
+      std::lock_guard<std::mutex> lock(m);
+      last_echo = e;
+      cond_var.notify_one();
+    }
   }
-  void OnServiceConnected(const std::string &uid) override {
-    spdlog::info("service connected");
-  };
-  void OnTransactionStart(uint64_t timestamp) override{};
-  void OnTransactionEnd() override{};
-  void OnData(const std::string &uid, uint64_t timestamp, uint16_t target_id,
-              const void *payload, size_t buflen) override {
-    spdlog::info("ondata");
+  void OnMessageCountChanged(const uint32_t &new_value) override {
+    // spdlog::info("Got count {}", new_value);
   }
-  void OnServiceDisconnected(const std::string &uid) override {
-    spdlog::info("service disconnected");
-  };
 };
+
+void echoThread() {
+  EchoServiceInterface si{1};
+  si.Start();
+  int i = 0;
+  while (1) {
+    std::unique_lock<std::mutex> lock(m);
+    std::string str =
+        std::string("this is a test message ") + std::to_string(i++);
+    // spdlog::info("-- sending");
+    auto start = std::chrono::steady_clock::now();
+    si.SendInputText(str.c_str(), str.length());
+    const auto stat = cond_var.wait_for(lock, std::chrono::milliseconds(10));
+
+    if (stat == std::cv_status::no_timeout) {
+      // spdlog::info("-- got echo");
+      // got data
+      if (last_echo == str) {
+        auto end = std::chrono::steady_clock::now();
+        auto duration =
+            std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+                .count();
+        spdlog::info("ping: {} uS", duration);
+        ok++;
+      } else {
+        error++;
+      }
+    } else {
+      // spdlog::info("-- got TO");
+      timeout++;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    if ((ok + error + timeout) % 100 == 0) {
+      spdlog::info("error: {}", error);
+      spdlog::info("timeout: {}", timeout);
+      spdlog::info("ok: {}", ok);
+    }
+  }
+}
 
 int main() {
   hub::CrowToSpeedlogHandler logger;
@@ -52,14 +92,11 @@ int main() {
 
   crow::SimpleApp app;
 
-  EchoServiceInterface si{1};
-  si.Start();
+  std::thread echo{echoThread};
 
+  int i = 0;
   CROW_ROUTE(app, "/")
-  ([&si]() {
-    si.SendSomething();
-    return "Hello world";
-  });
+  ([]() { return "Hello world"; });
   CROW_ROUTE(app, "/services")
   ([]() {
     nlohmann::json result = nlohmann::detail::value_t::object;

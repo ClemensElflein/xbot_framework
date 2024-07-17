@@ -21,3 +21,4 @@ set(ZCBOR_CODEGEN_EXECUTABLE "${PROJECT_BINARY_DIR}/.venv/bin/zcbor" CACHE PATH 
 
 include(cmake/AddService.cmake)
 include(cmake/AddMessage.cmake)
+include(cmake/AddServiceInterface.cmake)

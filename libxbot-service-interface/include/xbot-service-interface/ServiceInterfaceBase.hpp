@@ -10,6 +10,7 @@
 
 #include "ServiceIO.hpp"
 
+namespace xbot::serviceif {
 class ServiceInterfaceBase : public xbot::serviceif::ServiceIOCallbacks,
                              public xbot::serviceif::ServiceDiscoveryCallbacks {
  public:
@@ -48,5 +49,6 @@ class ServiceInterfaceBase : public xbot::serviceif::ServiceIOCallbacks,
   bool transaction_started_{false};
   std::mutex state_mutex_{};
 };
+}  // namespace xbot::serviceif
 
 #endif  // SERVICEINTERFACEBASE_HPP

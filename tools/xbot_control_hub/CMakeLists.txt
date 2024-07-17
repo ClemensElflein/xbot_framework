@@ -5,7 +5,9 @@ project(xbot_hub C CXX)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_service_interface(EchoServiceInterface ${CMAKE_CURRENT_SOURCE_DIR}/../../example/EchoService/service.json)
+
 add_executable(xbot_hub
         main.cpp
         PlotJugglerBridge.cpp)
-target_link_libraries(xbot_hub PRIVATE cli::cli cli::cli Crow xbot-service-interface)
+target_link_libraries(xbot_hub PRIVATE cli::cli cli::cli Crow xbot-service-interface EchoServiceInterface)

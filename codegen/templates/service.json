@@ -1,5 +1,6 @@
 {
   "type": "ServiceTemplate",
+  "version": 1,
   "inputs": [
     {
       "id": 0,

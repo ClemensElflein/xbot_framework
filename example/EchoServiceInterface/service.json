@@ -9,6 +9,12 @@
       "id": 1,
       "name": "Some Integer",
       "type": "uint32_t"
+    },
+    {
+      "encoding": "zcbor",
+      "id": 2,
+      "name": "A Pet",
+      "type": "Pet"
     }
   ],
   "outputs": [
@@ -21,6 +27,12 @@
       "id": 1,
       "name": "Message Count",
       "type": "uint32_t"
+    },
+    {
+      "encoding": "zcbor",
+      "id": 2,
+      "name": "A Pet",
+      "type": "Pet"
     }
   ],
   "registers": [

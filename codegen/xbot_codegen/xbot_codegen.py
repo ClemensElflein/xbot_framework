@@ -43,7 +43,10 @@ def loadService(path: str) -> dict:
 
     # Build the dict for code generation.
     service = {
+        "type": json_service["type"],
+        "version": int(json_service["version"]),
         "class_name": toCamelCase(json_service["type"]) + "Base",
+        "interface_class_name": toCamelCase(json_service["type"]) + "InterfaceBase",
         "service_json": json.dumps(json_service, indent=2),
         "service_cbor": cbor2.dumps(json_service)
     }
@@ -56,6 +59,7 @@ def loadService(path: str) -> dict:
         input_name = toCamelCase(json_input['name'])
         input_id = int(json_input['id'])
         callback_name = f"On{input_name}Changed"
+        method_name = f"Send{input_name}"
         custom_decoder_code = None
         # Handle array types (type[length])
         if "[" in json_input["type"] and "]" in json_input["type"]:
@@ -71,7 +75,8 @@ def loadService(path: str) -> dict:
                 "type": type,
                 "is_array": True,
                 "max_length": max_length,
-                "callback_name": callback_name
+                "callback_name": callback_name,
+                "method_name": method_name
             }
         else:
             # Not an array type
@@ -102,7 +107,8 @@ def loadService(path: str) -> dict:
                 "type": type,
                 "is_array": False,
                 "callback_name": callback_name,
-                "custom_decoder_code": custom_decoder_code
+                "custom_decoder_code": custom_decoder_code,
+                "method_name": method_name
             }
 
         inputs.append(input)
@@ -115,6 +121,7 @@ def loadService(path: str) -> dict:
         output_name = toCamelCase(json_output['name'])
         output_id = int(json_output['id'])
         method_name = f"Send{output_name}"
+        callback_name = f"On{output_name}Changed"
         custom_encoder_code = None
         # Handle array types (type[length])
         if "[" in json_output["type"] and "]" in json_output["type"]:
@@ -130,7 +137,8 @@ def loadService(path: str) -> dict:
                 "type": type,
                 "is_array": True,
                 "max_length": max_length,
-                "method_name": method_name
+                "method_name": method_name,
+                "callback_name": callback_name
             }
         else:
             # Not an array type
@@ -161,7 +169,8 @@ def loadService(path: str) -> dict:
                 "type": type,
                 "is_array": False,
                 "method_name": method_name,
-                "custom_encoder_code": custom_encoder_code
+                "custom_encoder_code": custom_encoder_code,
+                "callback_name": callback_name
             }
 
         outputs.append(output)
