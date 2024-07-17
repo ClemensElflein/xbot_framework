@@ -3,15 +3,32 @@ project(xbot_framework C CXX)
 
 add_subdirectory(ext)
 add_subdirectory(codegen)
-add_subdirectory(libxbot-service)
-add_subdirectory(libxbot-service-interface)
 
-if (${XBOT_BUILD_APPS})
+if (XBOT_BUILD_APPS)
     message("Building Apps")
+    set(XBOT_BUILD_LIB_SERVICE_INTERFACE ON)
+endif ()
+
+if (XBOT_BUILD_EXAMPLES)
+    message("Building Examples")
+    set(XBOT_BUILD_LIB_SERVICE ON)
+endif ()
+
+if (XBOT_BUILD_LIB_SERVICE)
+    message("Building Service Lib")
+    add_subdirectory(libxbot-service)
+endif ()
+
+if (XBOT_BUILD_LIB_SERVICE_INTERFACE)
+    message("Building Service Interface Lib")
+    add_subdirectory(libxbot-service-interface)
+endif ()
+
+if (XBOT_BUILD_APPS)
     add_subdirectory(tools/xbot_control_hub)
 endif ()
 
-if (${XBOT_BUILD_EXAMPLES})
-    message("Building Examples")
+
+if (XBOT_BUILD_EXAMPLES)
     add_subdirectory(example)
 endif ()

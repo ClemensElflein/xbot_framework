@@ -6,7 +6,7 @@
 #define SOCKET_HPP
 #include <cstddef>
 #include <cstdint>
-#include <portable/packet.hpp>
+#include <xbot-service/portable/packet.hpp>
 #include <xbot/socket_impl.hpp>
 
 #ifndef XBOT_SOCKET_TYPEDEF

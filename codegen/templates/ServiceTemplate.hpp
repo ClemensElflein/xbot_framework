@@ -17,7 +17,7 @@ cog.outl(f"#define {service['class_name'].upper()}_HPP")
 #define SERVICETEMPLATEBASE_HPP
 //[[[end]]]
 
-#include "Service.hpp"
+#include <xbot-service/Service.hpp>
 
 /*[[[cog
 for include in service['additional_includes']:
@@ -26,9 +26,9 @@ for include in service['additional_includes']:
 //[[[end]]]
 
 /*[[[cog
-cog.outl(f"class {service['class_name']} : public xbot::comms::Service {{")
+cog.outl(f"class {service['class_name']} : public xbot::service::Service {{")
 ]]]*/
-class ServiceTemplateBase : public xbot::comms::Service {
+class ServiceTemplateBase : public xbot::service::Service {
 //[[[end]]]
 public:
     /*[[[cog
@@ -140,7 +140,7 @@ public:
 private:
     uint32_t sd_sequence_ = 0;
     bool reboot = true;
-    bool handlePacket(const xbot::comms::datatypes::XbotHeader *header, const void *payload) override final;
+    bool handlePacket(const xbot::datatypes::XbotHeader *header, const void *payload) override final;
     bool advertiseService() override final;
 
 

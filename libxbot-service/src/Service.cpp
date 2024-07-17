@@ -3,13 +3,12 @@
 //
 #include <ulog.h>
 
-#include <Io.hpp>
-#include <Service.hpp>
 #include <algorithm>
+#include <xbot-service/Io.hpp>
+#include <xbot-service/Lock.hpp>
+#include <xbot-service/Service.hpp>
+#include <xbot-service/portable/system.hpp>
 #include <xbot/datatypes/ClaimPayload.hpp>
-
-#include "Lock.hpp"
-#include "portable/system.hpp"
 
 xbot::service::Service::Service(uint16_t service_id, uint32_t tick_rate_micros,
                                 void *processing_thread_stack,

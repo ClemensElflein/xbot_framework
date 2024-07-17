@@ -27,7 +27,7 @@ target_include_directories(xbot-service PUBLIC ${XBOT_CUSTOM_PORT_PATH}/include)
 target_sources(xbot-service PRIVATE ${PORT_SOURCES})
 
 
-target_include_directories(xbot-service PUBLIC include ${PROJECT_SOURCE_DIR}/../include)
+target_include_directories(xbot-service PUBLIC include ../include)
 target_link_libraries(xbot-service PUBLIC ulog etl)
 #set_property(TARGET xbot-service PROPERTY CXX_STANDARD 23)
 

@@ -1,4 +1,4 @@
-# libxbot-service Library
+# xbot-service Library
 
 This library can be used to easily implement services compatible with the xbot framework.
 

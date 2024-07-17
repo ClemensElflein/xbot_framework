@@ -15,15 +15,15 @@ cog.outl(f'#include "{service["class_name"]}.hpp"')
 //[[[end]]]
 #include <cstring>
 #include <ulog.h>
-#include "Lock.hpp"
-#include "portable/system.hpp"
+#include <xbot-service/Lock.hpp>
+#include <xbot-service/portable/system.hpp>
 
 /*[[[cog
-cog.outl(f"bool {service['class_name']}::handlePacket(const xbot::comms::datatypes::XbotHeader *header, const void *payload) {{")
+cog.outl(f"bool {service['class_name']}::handlePacket(const xbot::datatypes::XbotHeader *header, const void *payload) {{")
 ]]]*/
-bool ServiceTemplateBase::handlePacket(const xbot::comms::datatypes::XbotHeader *header, const void *payload) {
+bool ServiceTemplateBase::handlePacket(const xbot::datatypes::XbotHeader *header, const void *payload) {
 //[[[end]]]
-    if (header->message_type == xbot::comms::datatypes::MessageType::DATA) {
+    if (header->message_type == xbot::datatypes::MessageType::DATA) {
         // Call the callback for this input
         switch (header->arg2) {
             /*[[[cog
@@ -85,7 +85,7 @@ bool ServiceTemplateBase::advertiseService() {
     scratch_buffer[index++] = 0x84;
 
     uint8_t id[16];
-    if(!xbot::comms::system::getNodeId(id, 16)) {
+    if(!xbot::service::system::getNodeId(id, 16)) {
         ULOG_ARG_ERROR(&service_id_, "Error fetching node ID");
 
         return false;
@@ -128,7 +128,7 @@ bool ServiceTemplateBase::advertiseService() {
     char address[16]{};
     uint16_t port = 0;
 
-    if(!xbot::comms::sock::getEndpoint(&udp_socket_, address, sizeof(address), &port)) {
+    if(!xbot::service::sock::getEndpoint(&udp_socket_, address, sizeof(address), &port)) {
         ULOG_ARG_ERROR(&service_id_, "Error fetching socket address");
         return false;
     }
@@ -169,29 +169,29 @@ bool ServiceTemplateBase::advertiseService() {
     index+=sizeof(SERVICE_DESCRIPTION_CBOR);
 
 
-    xbot::comms::datatypes::XbotHeader header{};
+    xbot::datatypes::XbotHeader header{};
     if(reboot) {
         header.flags = 1;
     } else {
         header.flags = 0;
     }
-    header.message_type = xbot::comms::datatypes::MessageType::SERVICE_ADVERTISEMENT;
+    header.message_type = xbot::datatypes::MessageType::SERVICE_ADVERTISEMENT;
     header.payload_size = index;
     header.protocol_version = 1;
     header.arg1 = 0;
     header.arg2 = 0;
     header.sequence_no = sd_sequence_++;
-    header.timestamp = xbot::comms::system::getTimeMicros();
+    header.timestamp = xbot::service::system::getTimeMicros();
 
     // Reset reboot on rollover
     if(sd_sequence_==0) {
         reboot = false;
     }
 
-    xbot::comms::packet::PacketPtr ptr = xbot::comms::packet::allocatePacket();
-    xbot::comms::packet::packetAppendData(ptr, &header, sizeof(header));
-    xbot::comms::packet::packetAppendData(ptr, scratch_buffer, header.payload_size);
-    return xbot::comms::sock::transmitPacket(&udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
+    xbot::service::packet::PacketPtr ptr = xbot::service::packet::allocatePacket();
+    xbot::service::packet::packetAppendData(ptr, &header, sizeof(header));
+    xbot::service::packet::packetAppendData(ptr, scratch_buffer, header.payload_size);
+    return xbot::service::sock::transmitPacket(&udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
 }
 
 /*[[[cog

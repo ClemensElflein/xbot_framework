@@ -4,9 +4,9 @@
 
 #ifndef PACKETHANDLER_H
 #define PACKETHANDLER_H
-#include <portable/mutex.hpp>
-#include <portable/queue.hpp>
-#include <portable/socket.hpp>
+#include <xbot-service/portable/mutex.hpp>
+#include <xbot-service/portable/queue.hpp>
+#include <xbot-service/portable/socket.hpp>
 
 namespace xbot::service {
 /**

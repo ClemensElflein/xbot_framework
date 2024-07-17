@@ -4,13 +4,13 @@
 
 #include <ulog.h>
 
-#include <RemoteLogging.hpp>
 #include <cstdio>
 #include <cstring>
+#include <xbot-service/Lock.hpp>
+#include <xbot-service/RemoteLogging.hpp>
+#include <xbot-service/portable/socket.hpp>
 #include <xbot/config.hpp>
 
-#include "Lock.hpp"
-#include "portable/socket.hpp"
 #include "xbot/datatypes/LogPayload.hpp"
 #include "xbot/datatypes/XbotHeader.hpp"
 

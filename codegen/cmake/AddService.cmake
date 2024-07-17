@@ -15,5 +15,5 @@ function(add_service SERVICE_NAME JSON_FILE)
     )
 
     target_include_directories(${SERVICE_NAME} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
-    target_link_libraries(${SERVICE_NAME} PUBLIC xbot_comms)
+    target_link_libraries(${SERVICE_NAME} PUBLIC xbot-service)
 endfunction()

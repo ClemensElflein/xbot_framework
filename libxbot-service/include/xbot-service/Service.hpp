@@ -5,7 +5,7 @@
 #ifndef SERVICE_HPP
 #define SERVICE_HPP
 
-#include <ServiceIo.h>
+#include <xbot-service/ServiceIo.h>
 
 #include <xbot/config.hpp>
 
