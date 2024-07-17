@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 project(xbot_framework C CXX)
 
-add_subdirectory(ext)
-add_subdirectory(codegen)
 
 if (XBOT_BUILD_APPS)
     message("Building Apps")
@@ -13,6 +11,9 @@ if (XBOT_BUILD_EXAMPLES)
     message("Building Examples")
     set(XBOT_BUILD_LIB_SERVICE ON)
 endif ()
+
+add_subdirectory(ext)
+add_subdirectory(codegen)
 
 if (XBOT_BUILD_LIB_SERVICE)
     message("Building Service Lib")
