@@ -45,6 +45,7 @@ class ServiceDiscovery {
   static bool Start();
 
   static void RegisterCallbacks(ServiceDiscoveryCallbacks *callbacks);
+  static void UnregisterCallbacks(ServiceDiscoveryCallbacks *callbacks);
 
   /**
    * Gets a copy of the ServiceInfo registered for this UID.

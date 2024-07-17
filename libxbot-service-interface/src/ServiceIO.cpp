@@ -21,8 +21,9 @@ using namespace xbot::serviceif;
  * cheap once the endpoint changes.
  */
 std::map<uint64_t, std::unique_ptr<ServiceState>> endpoint_map_{};
+std::map<std::string, uint64_t> inverse_endpoint_map_{};
 
-// Protects endpoint_map_ and instance_
+// Protects inverse_endpoint_map_, endpoint_map_ and instance_
 std::recursive_mutex state_mutex_{};
 ServiceIO *instance_ = nullptr;
 
@@ -57,6 +58,7 @@ bool ServiceIO::OnServiceDiscovered(std::string uid) {
     std::unique_ptr<ServiceState> state = std::make_unique<ServiceState>();
     state->uid = uid;
     endpoint_map_.emplace(key, std::move(state));
+    inverse_endpoint_map_[uid] = key;
   }
 
   return true;
@@ -92,6 +94,8 @@ bool ServiceIO::OnEndpointChanged(std::string uid, uint32_t old_ip,
     endpoint_map_.emplace(new_key, std::move(endpoint_map_.at(old_key)));
     endpoint_map_.erase(old_key);
   }
+
+  inverse_endpoint_map_[uid] = new_key;
 
   return true;
 }
@@ -138,6 +142,21 @@ void ServiceIO::UnregisterCallbacks(ServiceIOCallbacks *callbacks) {
   }
 }
 
+bool ServiceIO::SendData(const std::string &uid,
+                         const std::vector<uint8_t> &data) {
+  uint64_t endpoint;
+  {
+    std::unique_lock lk{state_mutex_};
+    if (!inverse_endpoint_map_.contains(uid)) {
+      spdlog::warn("no endpoint for service {}", uid);
+      return false;
+    }
+    endpoint = inverse_endpoint_map_.at(uid);
+  }
+
+  return TransmitPacket(endpoint, data);
+}
+
 void ServiceIO::RunIo() {
   // Set timeout so that we can detect missing heartbeat
   io_socket_.SetReceiveTimeoutMicros(config::default_heartbeat_micros);
@@ -181,6 +200,7 @@ void ServiceIO::RunIo() {
             }
 
             // Erase and advance iterator
+            inverse_endpoint_map_.erase(uid);
             it = endpoint_map_.erase(it);
           } else {
             // No timeout, go to next
@@ -263,7 +283,64 @@ void ServiceIO::RunIo() {
           if (const auto it = registered_callbacks_.find(ptr->uid);
               it != registered_callbacks_.end()) {
             for (const auto &cb : it->second) {
-              cb->OnData(ptr->uid, *header, payload_ptr);
+              cb->OnData(ptr->uid, header->timestamp, header->arg2, payload_ptr,
+                         header->payload_size);
+            }
+          }
+        } else if (header->message_type ==
+                   datatypes::MessageType::TRANSACTION) {
+          {
+            std::unique_lock lk{state_mutex_};
+            if (!endpoint_map_.contains(key)) {
+              spdlog::warn("got data from wrong service");
+              continue;
+            }
+            if (!endpoint_map_.at(key)->claimed_successfully_) {
+              spdlog::warn("Got data from an unclaimed service, dropping it.");
+              continue;
+            }
+          }
+          const auto payload_ptr =
+              packet.data() + sizeof(datatypes::XbotHeader);
+          const auto &state_ptr = endpoint_map_.at(key);
+
+          // Notify callbacks for that service
+          if (const auto it = registered_callbacks_.find(state_ptr->uid);
+              it != registered_callbacks_.end()) {
+            for (const auto &cb : it->second) {
+              cb->OnTransactionStart(header->timestamp);
+              // Go throguh all data packets in the transaction
+              size_t processed_len = 0;
+              while (processed_len + sizeof(datatypes::DataDescriptor) <=
+                     header->payload_size) {
+                // we have at least enough data for the next descriptor, read it
+                const auto descriptor =
+                    reinterpret_cast<datatypes::DataDescriptor *>(
+                        payload_ptr + processed_len);
+                size_t data_size = descriptor->payload_size;
+                if (processed_len + sizeof(datatypes::DataDescriptor) +
+                        data_size <=
+                    header->payload_size) {
+                  // we can safely read the data
+                  cb->OnData(state_ptr->uid, header->timestamp,
+                             descriptor->target_id,
+                             payload_ptr + processed_len +
+                                 sizeof(datatypes::DataDescriptor),
+                             data_size);
+                } else {
+                  spdlog::error(
+                      "Error parsing transaction, header payload size does not "
+                      "match transaction size!");
+                  break;
+                }
+                processed_len += data_size + sizeof(datatypes::DataDescriptor);
+              }
+
+              if (processed_len != header->payload_size) {
+                spdlog::warn("Transaction size mismatch!");
+              }
+
+              cb->OnTransactionEnd();
             }
           }
         }

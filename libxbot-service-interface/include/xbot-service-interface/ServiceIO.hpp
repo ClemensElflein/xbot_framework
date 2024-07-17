@@ -37,14 +37,26 @@ class ServiceIOCallbacks {
   virtual void OnServiceConnected(const std::string &uid) = 0;
 
   /**
-   * Called whenever a packet is received from the specified service.
-   * @param service service uid
-   * @param header the header for the received packet
-   * @param payload the raw payload
+   * Called whenever a new transaction starts
    */
-  virtual void OnData(const std::string &uid,
-                      const datatypes::XbotHeader &header,
-                      const void *payload) = 0;
+  virtual void OnTransactionStart(uint64_t timestamp) = 0;
+
+  /**
+   * Called whenever a transaction was finished
+   */
+  virtual void OnTransactionEnd() = 0;
+
+  /**
+   * Called whenever a packet is received from the specified service.
+   * @param uid service uid
+   * @param timestamp timestamp
+   * @param target_id ID of the io target
+   * @param payload the raw payload
+   * @param buflen size of the payload buffer
+   */
+  virtual void OnData(const std::string &uid, uint64_t timestamp,
+                      uint16_t target_id, const void *payload,
+                      size_t buflen) = 0;
 
   /**
    * Called whenever a service is disconnected.
@@ -91,6 +103,12 @@ class ServiceIO : public ServiceDiscoveryCallbacks {
    * @param callbacks callback pointer
    */
   static void UnregisterCallbacks(ServiceIOCallbacks *callbacks);
+
+  /**
+   * Send data to a given service target
+   */
+  static bool SendData(const std::string &uid,
+                       const std::vector<uint8_t> &data);
 
   ServiceIO() = default;
   ~ServiceIO() override = default;

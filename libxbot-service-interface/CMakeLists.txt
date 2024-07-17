@@ -10,6 +10,8 @@ add_library(xbot-service-interface
         src/ServiceIO.cpp
         src/ServiceDiscovery.cpp
         src/ServiceInfo.cpp
+        include/xbot-service-interface/ServiceInterfaceBase.hpp
+        src/ServiceInterfaceBase.cpp
 )
 
 target_include_directories(xbot-service-interface PUBLIC

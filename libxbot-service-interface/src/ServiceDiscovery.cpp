@@ -53,7 +53,28 @@ void ServiceDiscovery::RegisterCallbacks(ServiceDiscoveryCallbacks *callbacks) {
     return;
   }
   std::unique_lock lk(sd_mutex_);
-  registered_callbacks_.push_back(callbacks);
+  const auto &it = std::find(registered_callbacks_.begin(),
+                             registered_callbacks_.end(), callbacks);
+  if (it == registered_callbacks_.end()) {
+    registered_callbacks_.push_back(callbacks);
+  }
+}
+void ServiceDiscovery::UnregisterCallbacks(
+    ServiceDiscoveryCallbacks *callbacks) {
+  if (callbacks == nullptr) {
+    return;
+  }
+  std::unique_lock lk(sd_mutex_);
+
+  while (true) {
+    const auto &it = std::find(registered_callbacks_.begin(),
+                               registered_callbacks_.end(), callbacks);
+    if (it != registered_callbacks_.end()) {
+      registered_callbacks_.erase(it);
+    } else {
+      break;
+    }
+  }
 }
 
 std::unique_ptr<ServiceInfo> ServiceDiscovery::GetServiceInfo(

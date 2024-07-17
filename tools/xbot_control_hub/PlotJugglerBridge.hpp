@@ -35,8 +35,10 @@ class PlotJugglerBridge : public serviceif::ServiceDiscoveryCallbacks,
   bool OnEndpointChanged(std::string uid, uint32_t old_ip, uint16_t old_port,
                          uint32_t new_ip, uint16_t new_port) override;
   void OnServiceConnected(const std::string &uid) override;
-  void OnData(const std::string &uid, const datatypes::XbotHeader &header,
-              const void *payload) override;
+  void OnTransactionStart(uint64_t timestamp) override;
+  void OnTransactionEnd() override;
+  void OnData(const std::string &uid, uint64_t timestamp, uint16_t target_id,
+              const void *payload, size_t buflen) override;
   void OnServiceDisconnected(const std::string &uid) override;
 
  private:

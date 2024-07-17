@@ -117,12 +117,14 @@ bool PlotJugglerBridge::OnEndpointChanged(std::string uid, uint32_t old_ip,
 void PlotJugglerBridge::OnServiceConnected(const std::string& uid) {
   spdlog::info("PJB: Service Connected!");
 }
-void PlotJugglerBridge::OnData(const std::string& uid,
-                               const datatypes::XbotHeader& header,
-                               const void* payload) {
+void PlotJugglerBridge::OnTransactionStart(uint64_t timestamp) {}
+void PlotJugglerBridge::OnTransactionEnd() {}
+void PlotJugglerBridge::OnData(const std::string& uid, uint64_t timestamp,
+                               uint16_t target_id, const void* payload,
+                               size_t buflen) {
   std::unique_lock lk{state_mutex_};
   // Find the output description
-  const auto& it = topic_map_.find(std::make_pair(uid, header.arg2));
+  const auto& it = topic_map_.find(std::make_pair(uid, target_id));
   if (it == topic_map_.end()) {
     spdlog::warn("PJB: Data packet with invalid ID");
     return;
@@ -149,7 +151,7 @@ void PlotJugglerBridge::OnData(const std::string& uid,
     const auto& fn = conversion_fn_map.at(output.type);
     if (!output.is_array) {
       // convert
-      data = fn(payload, header.payload_size);
+      data = fn(payload, buflen);
     } else {
       // Get the itme size
       if (!type_size_map.contains(output.type)) {
@@ -157,8 +159,8 @@ void PlotJugglerBridge::OnData(const std::string& uid,
         return;
       }
       size_t item_size = type_size_map.at(output.type);
-      size_t array_len = std::min(header.payload_size / item_size,
-                                  static_cast<size_t>(output.maxlen));
+      size_t array_len =
+          std::min(buflen / item_size, static_cast<size_t>(output.maxlen));
       for (size_t i = 0; i < array_len; i++) {
         data[i] =
             fn(static_cast<const uint8_t*>(payload) + i * item_size, item_size);
@@ -166,12 +168,8 @@ void PlotJugglerBridge::OnData(const std::string& uid,
     }
   }
 
-  nlohmann::json json =
-      nlohmann::json::object({{uid,
-                               {{output.name,
-                                 {{"sequence", header.sequence_no},
-                                  {"stamp", header.timestamp},
-                                  {"data", data}}}}}});
+  nlohmann::json json = nlohmann::json::object(
+      {{uid, {{output.name, {{"stamp", timestamp}, {"data", data}}}}}});
   std::string dump = json.dump(2);
   socket_.TransmitPacket("127.0.0.1", 9870,
                          reinterpret_cast<const uint8_t*>(dump.c_str()),

@@ -4,8 +4,38 @@
 
 #include "CrowToSpeedlogHandler.hpp"
 #include "PlotJugglerBridge.hpp"
+#include "xbot-service-interface/ServiceInterfaceBase.hpp"
 
 using namespace xbot::serviceif;
+
+class EchoServiceInterface : public ServiceInterfaceBase {
+ public:
+  explicit EchoServiceInterface(uint16_t service_id)
+      : ServiceInterfaceBase(service_id, "EchoService", 1) {}
+
+  int i = 0;
+  void SendSomething() {
+    StartTransaction();
+    i++;
+    std::string text = "this is a test " + std::to_string(i);
+    SendData(0, text.c_str(), text.length());
+    uint32_t j = i;
+    SendData(1, &j, sizeof(j));
+    CommitTransaction();
+  }
+  void OnServiceConnected(const std::string &uid) override {
+    spdlog::info("service connected");
+  };
+  void OnTransactionStart(uint64_t timestamp) override{};
+  void OnTransactionEnd() override{};
+  void OnData(const std::string &uid, uint64_t timestamp, uint16_t target_id,
+              const void *payload, size_t buflen) override {
+    spdlog::info("ondata");
+  }
+  void OnServiceDisconnected(const std::string &uid) override {
+    spdlog::info("service disconnected");
+  };
+};
 
 int main() {
   hub::CrowToSpeedlogHandler logger;
@@ -22,7 +52,14 @@ int main() {
 
   crow::SimpleApp app;
 
-  CROW_ROUTE(app, "/")([]() { return "Hello world"; });
+  EchoServiceInterface si{1};
+  si.Start();
+
+  CROW_ROUTE(app, "/")
+  ([&si]() {
+    si.SendSomething();
+    return "Hello world";
+  });
   CROW_ROUTE(app, "/services")
   ([]() {
     nlohmann::json result = nlohmann::detail::value_t::object;
