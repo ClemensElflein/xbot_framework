@@ -19,40 +19,40 @@ cog.outl(f'#include "{service["class_name"]}.hpp"')
 #include <xbot-service/portable/system.hpp>
 
 /*[[[cog
-cog.outl(f"bool {service['class_name']}::handlePacket(const xbot::datatypes::XbotHeader *header, const void *payload) {{")
+cog.outl(f"bool {service['class_name']}::handleData(uint16_t target_id, const void *payload, size_t length) {{")
 ]]]*/
-bool ServiceTemplateBase::handlePacket(const xbot::datatypes::XbotHeader *header, const void *payload) {
+bool ServiceTemplateBase::handleData(uint16_t target_id, const void *payload, size_t length) {
 //[[[end]]]
-    if (header->message_type == xbot::datatypes::MessageType::DATA) {
+
         // Call the callback for this input
-        switch (header->arg2) {
+        switch (target_id) {
             /*[[[cog
             for i in service['inputs']:
                 cog.outl(f"case {i['id']}:");
                 if i['is_array']:
-                    cog.outl(f"if(header->payload_size % sizeof({i['type']}) != 0) {{");
+                    cog.outl(f"if(length % sizeof({i['type']}) != 0) {{");
                     cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data size\");");
                     cog.outl("    return false;");
                     cog.outl("}");
-                    cog.outl(f"return {i['callback_name']}(static_cast<const {i['type']}*>(payload), header->payload_size/sizeof({i['type']}));");
+                    cog.outl(f"return {i['callback_name']}(static_cast<const {i['type']}*>(payload), length/sizeof({i['type']}));");
                 else:
                     if i['custom_decoder_code']:
                         cog.outl(i['custom_decoder_code'])
                     else:
-                        cog.outl(f"if(header->payload_size != sizeof({i['type']})) {{");
+                        cog.outl(f"if(length != sizeof({i['type']})) {{");
                         cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data size\");");
                         cog.outl("    return false;");
                         cog.outl("}");
                         cog.outl(f"return {i['callback_name']}(*static_cast<const {i['type']}*>(payload));");
             ]]]*/
             case 0:
-            if(header->payload_size % sizeof(char) != 0) {
+            if(length % sizeof(char) != 0) {
                 ULOG_ARG_ERROR(&service_id_, "Invalid data size");
                 return false;
             }
-            return OnExampleInput1Changed(static_cast<const char*>(payload), header->payload_size/sizeof(char));
+            return OnExampleInput1Changed(static_cast<const char*>(payload), length/sizeof(char));
             case 1:
-            if(header->payload_size != sizeof(uint32_t)) {
+            if(length != sizeof(uint32_t)) {
                 ULOG_ARG_ERROR(&service_id_, "Invalid data size");
                 return false;
             }
@@ -61,8 +61,7 @@ bool ServiceTemplateBase::handlePacket(const xbot::datatypes::XbotHeader *header
             default:
                 return false;
         }
-    }
-    return false;
+        return false;
 }
 /*[[[cog
 cog.outl(f"bool {service['class_name']}::advertiseService() {{")

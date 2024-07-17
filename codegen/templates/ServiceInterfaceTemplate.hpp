@@ -9,15 +9,15 @@ import xbot_codegen
 service = xbot_codegen.loadService(service_file)
 
 #Generate include guard
-cog.outl(f"#ifndef {service['class_name'].upper()}_HPP")
-cog.outl(f"#define {service['class_name'].upper()}_HPP")
+cog.outl(f"#ifndef {service['class_name'].upper()}_INTERFACE_HPP")
+cog.outl(f"#define {service['class_name'].upper()}_INTERFACE_HPP")
 
 ]]]*/
-#ifndef SERVICETEMPLATEBASE_HPP
-#define SERVICETEMPLATEBASE_HPP
+#ifndef SERVICETEMPLATEBASE_INTERFACE_HPP
+#define SERVICETEMPLATEBASE_INTERFACE_HPP
 //[[[end]]]
 
-#include "Service.hpp"
+#include <xbot-service-interface/ServiceInterfaceBase.hpp>
 
 /*[[[cog
 for include in service['additional_includes']:
@@ -26,23 +26,15 @@ for include in service['additional_includes']:
 //[[[end]]]
 
 /*[[[cog
-cog.outl(f"class {service['class_name']} : public xbot::comms::ServiceInterface {{")
+cog.outl(f"class {service['class_name']} : public xbot::serviceif::ServiceInterfaceBase {{")
 ]]]*/
-class ServiceTemplateBase : public xbot::comms::Service {
+class ServiceTemplateBase : public xbot::serviceif::ServiceInterfaceBase {
 //[[[end]]]
 public:
     /*[[[cog
-    cog.outl("#ifdef XBOT_ENABLE_STATIC_STACK")
-    cog.outl(f"explicit {service['class_name']}(uint16_t service_id, uint32_t tick_rate_micros, void* stack, size_t stack_size)")
-    cog.outl("#else")
-    cog.outl(f"explicit {service['class_name']}(uint16_t service_id, uint32_t tick_rate_micros)")
-    cog.outl("#endif")
+    cog.outl(f"explicit {service['class_name']}(uint16_t service_id)")
     ]]]*/
-    #ifdef XBOT_ENABLE_STATIC_STACK
-    explicit ServiceTemplateBase(uint16_t service_id, uint32_t tick_rate_micros, void* stack, size_t stack_size)
-    #else
-    explicit ServiceTemplateBase(uint16_t service_id, uint32_t tick_rate_micros)
-    #endif
+    explicit ServiceTemplateBase(uint16_t service_id)
     //[[[end]]]
     #ifdef XBOT_ENABLE_STATIC_STACK
         : Service(service_id, tick_rate_micros, stack, stack_size) {

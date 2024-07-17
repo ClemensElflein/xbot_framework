@@ -94,8 +94,8 @@ class Service : public ServiceIo {
 
   virtual bool advertiseService() = 0;
 
-  virtual bool handlePacket(const datatypes::XbotHeader *header,
-                            const void *payload) = 0;
+  virtual bool handleData(uint16_t target_id, const void *payload,
+                          size_t length) = 0;
 };
 }  // namespace xbot::service
 

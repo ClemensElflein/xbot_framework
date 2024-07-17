@@ -87,7 +87,7 @@ def loadService(path: str) -> dict:
                 # Generate the decoding code
                 custom_decoder_code = ("{\n"
                                        f"   struct {json_input['type']} result;\n"
-                                       f"   if(cbor_decode_{json_input['type']}(static_cast<const uint8_t*>(payload), header->payload_size, &result, nullptr) == ZCBOR_SUCCESS) {{\n"
+                                       f"   if(cbor_decode_{json_input['type']}(static_cast<const uint8_t*>(payload), length, &result, nullptr) == ZCBOR_SUCCESS) {{\n"
                                        f"       return {callback_name}(result);\n"
                                        "    } else {\n"
                                        "        return false;\n"

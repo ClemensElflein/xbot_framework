@@ -245,10 +245,43 @@ void xbot::service::Service::runProcessing() {
 
             SendDataClaimAck();
           }
-        } else {
+        } else if (header->message_type == datatypes::MessageType::DATA) {
           // Packet seems OK, hand to service
-          handlePacket(header, static_cast<uint8_t *>(buffer) +
-                                   sizeof(datatypes::XbotHeader));
+          handleData(
+              header->arg2,
+              static_cast<uint8_t *>(buffer) + sizeof(datatypes::XbotHeader),
+              header->payload_size);
+        } else if (header->message_type ==
+                   datatypes::MessageType::TRANSACTION) {
+          // Go throguh all data packets in the transaction
+          const auto payload_ptr =
+              static_cast<uint8_t *>(buffer) + sizeof(datatypes::XbotHeader);
+          size_t processed_len = 0;
+          while (processed_len + sizeof(datatypes::DataDescriptor) <=
+                 header->payload_size) {
+            // we have at least enough data for the next descriptor, read it
+            const auto descriptor =
+                reinterpret_cast<datatypes::DataDescriptor *>(payload_ptr +
+                                                              processed_len);
+            size_t data_size = descriptor->payload_size;
+            if (processed_len + sizeof(datatypes::DataDescriptor) + data_size <=
+                header->payload_size) {
+              // we can safely read the data
+              handleData(descriptor->target_id,
+                         payload_ptr + processed_len +
+                             sizeof(datatypes::DataDescriptor),
+                         data_size);
+            } else {
+              // error parsing transaction, header payload size does not match
+              // transaction size!
+              break;
+            }
+            processed_len += data_size + sizeof(datatypes::DataDescriptor);
+          }
+
+          if (processed_len != header->payload_size) {
+            ULOG_ARG_ERROR(&service_id_, "Transaction size mismatch");
+          }
         }
       }
 
