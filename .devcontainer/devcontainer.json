@@ -1,0 +1,30 @@
+{
+    "name": "xbot_framework Devcontainer",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": "."
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash"
+            },
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-themes",
+                "ms-vscode.cpptools-extension-pack",
+                "xaver.clang-format",
+                "twxs.cmake",
+                "ms-vscode.cmake-tools"
+            ]
+        }
+    },
+    "remoteUser": "devuser",
+    "runArgs": [
+        "--network=host"
+    ],
+    "mounts": [
+        "source=${localWorkspaceFolderBasename}-build,target=${containerWorkspaceFolder}/build,type=volume"
+    ],
+    "postCreateCommand": "sudo chown devuser build"
+}
