@@ -81,25 +81,7 @@ def loadService(path: str) -> dict:
         else:
             # Not an array type
             type = json_input["type"]
-            if json_input.get("encoding") == "zcbor":
-                # Add common header
-                if "<zcbor_common.h>" not in additional_includes:
-                    additional_includes.append("<zcbor_common.h>")
-                # Add additional include for the decoder
-                include_name = f"<{json_input['type']}_decode.h>"
-                if include_name not in additional_includes:
-                    additional_includes.append(include_name)
-                # Generate the decoding code
-                custom_decoder_code = ("{\n"
-                                       f"   struct {json_input['type']} result;\n"
-                                       f"   if(cbor_decode_{json_input['type']}(static_cast<const uint8_t*>(payload), length, &result, nullptr) == ZCBOR_SUCCESS) {{\n"
-                                       f"       return {callback_name}(result);\n"
-                                       "    } else {\n"
-                                       "        return false;\n"
-                                       "    }\n"
-                                       "}"
-                                       )
-            elif type not in raw_encoding_valid_types:
+            if type not in raw_encoding_valid_types:
                 raise Exception(f"Illegal data type: {type}!")
             input = {
                 "id": input_id,
@@ -143,25 +125,7 @@ def loadService(path: str) -> dict:
         else:
             # Not an array type
             type = json_output["type"]
-            if json_output.get("encoding") == "zcbor":
-                # Add common header
-                if "<zcbor_common.h>" not in additional_includes:
-                    additional_includes.append("<zcbor_common.h>")
-                # Add additional include for the decoder
-                include_name = f"<{json_output['type']}_encode.h>"
-                if include_name not in additional_includes:
-                    additional_includes.append(include_name)
-                # Generate the decoding code
-                custom_encoder_code = ("{\n"
-                                       f"   size_t encoded_len = 0;\n"
-                                       f"   if(cbor_encode_{json_output['type']}(scratch_buffer, sizeof(scratch_buffer), &data, &encoded_len) == ZCBOR_SUCCESS) {{\n"
-                                       f"       return SendData({output_id}, scratch_buffer, encoded_len);\n"
-                                       "    } else {\n"
-                                       "        return false;\n"
-                                       "    }\n"
-                                       "}"
-                                       )
-            elif type not in raw_encoding_valid_types:
+            if type not in raw_encoding_valid_types:
                 raise Exception(f"Illegal data type: {type}!")
             output = {
                 "id": output_id,
@@ -175,5 +139,55 @@ def loadService(path: str) -> dict:
 
         outputs.append(output)
     service["outputs"] = outputs
+
+    # Transform register definitions
+    registers = []
+    if "registers" in json_service:
+        for json_register in json_service["registers"]:
+            # Convert to valid C++ function name
+            register_name = toCamelCase(json_register['name'])
+            register_id = int(json_register['id'])
+            callback_name = f"OnRegister{register_name}Changed"
+            method_name = f"SetRegister{register_name}"
+            custom_decoder_code = None
+            # Handle array types (type[length])
+            if "[" in json_register["type"] and "]" in json_register["type"]:
+                # Split the type definition at the [, validate and get max length
+                type, _, rest = json_register["type"].rpartition("[")
+                # Rest needs to end with "]", it needs to be something like 123]
+                if not rest.endswith("]") or type not in raw_encoding_valid_types:
+                    raise Exception(f"Illegal data type: {type}!")
+                max_length = int(rest.replace("]", ""))
+                register = {
+                    "id": register_id,
+                    "name": register_name,
+                    "type": type,
+                    "is_array": True,
+                    "max_length": max_length,
+                    "callback_name": callback_name,
+                    "method_name": method_name,
+                    "default": json.dumps(json_register["default"]) if "default" in json_register else None
+                }
+            else:
+                # Not an array type
+                type = json_register["type"]
+                if type not in raw_encoding_valid_types:
+                    raise Exception(f"Illegal data type: {type}!")
+                register = {
+                    "id": register_id,
+                    "name": register_name,
+                    "type": type,
+                    "is_array": False,
+                    "callback_name": callback_name,
+                    "custom_decoder_code": custom_decoder_code,
+                    "method_name": method_name,
+                    "default": json.dumps(json_register["default"]) if "default" in json_register else None
+                }
+
+            registers.append(register)
+        service["registers"] = registers
+    else:
+        service["registers"] = []
+
     service["additional_includes"] = additional_includes
     return service

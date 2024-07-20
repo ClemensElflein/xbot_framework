@@ -81,14 +81,17 @@ bool xbot::service::Service::SendData(uint16_t target_id, const void *data,
     ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
     return false;
   }
-  fillHeader();
-  header_.message_type = datatypes::MessageType::DATA;
-  header_.payload_size = size;
-  header_.arg2 = target_id;
-
   // Send header and data
   packet::PacketPtr ptr = packet::allocatePacket();
-  packet::packetAppendData(ptr, &header_, sizeof(header_));
+  {
+    Lock lk(&state_mutex_);
+    fillHeader();
+    header_.message_type = datatypes::MessageType::DATA;
+    header_.payload_size = size;
+    header_.arg2 = target_id;
+
+    packet::packetAppendData(ptr, &header_, sizeof(header_));
+  }
   packet::packetAppendData(ptr, data, size);
   return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
@@ -98,20 +101,26 @@ bool xbot::service::Service::SendDataClaimAck() {
     ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
     return false;
   }
-  fillHeader();
-  header_.message_type = datatypes::MessageType::CLAIM;
-  header_.payload_size = 0;
-  header_.arg1 = 1;
-
   // Send header and data
   packet::PacketPtr ptr = packet::allocatePacket();
-  packet::packetAppendData(ptr, &header_, sizeof(header_));
+
+  {
+    Lock lk(&state_mutex_);
+    fillHeader();
+    header_.message_type = datatypes::MessageType::CLAIM;
+    header_.payload_size = 0;
+    header_.arg1 = 1;
+    packet::packetAppendData(ptr, &header_, sizeof(header_));
+  }
+
   return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
 bool xbot::service::Service::StartTransaction(uint64_t timestamp) {
   if (transaction_started_) {
     return false;
   }
+  // Lock like this, because we need to keep it locked until Commit()
+  mutex::lockMutex(&state_mutex_);
   fillHeader();
   // If the user has provided a timestamp for the data, set it here.
   if (timestamp) {
@@ -134,6 +143,7 @@ bool xbot::service::Service::CommitTransaction() {
   packet::PacketPtr ptr = packet::allocatePacket();
   packet::packetAppendData(ptr, &header_, sizeof(header_));
   packet::packetAppendData(ptr, scratch_buffer, scratch_buffer_fill_);
+  mutex::unlockMutex(&state_mutex_);
   return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
 
@@ -156,14 +166,18 @@ void xbot::service::Service::heartbeat() {
     last_heartbeat_micros_ = system::getTimeMicros();
     return;
   }
-  fillHeader();
-  header_.message_type = datatypes::MessageType::HEARTBEAT;
-  header_.payload_size = 0;
-  header_.arg1 = 0;
-
   // Send header and data
   packet::PacketPtr ptr = packet::allocatePacket();
-  packet::packetAppendData(ptr, &header_, sizeof(header_));
+
+  {
+    Lock lk(&state_mutex_);
+    fillHeader();
+    header_.message_type = datatypes::MessageType::HEARTBEAT;
+    header_.payload_size = 0;
+    header_.arg1 = 0;
+
+    packet::packetAppendData(ptr, &header_, sizeof(header_));
+  }
   sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
   last_heartbeat_micros_ = system::getTimeMicros();
 }
@@ -173,6 +187,15 @@ void xbot::service::Service::runProcessing() {
   {
     Lock lk(&state_mutex_);
     last_tick_micros_ = system::getTimeMicros();
+  }
+  clearConfiguration();
+  // If after clearing the config, the service is configured, it does not need
+  // to be configured.
+  if (isConfigured()) {
+    // Call the configure lifecycle hook regardless
+    Configure();
+    OnStart();
+    is_running_ = true;
   }
   while (true) {
     // Check, if we should stop
@@ -197,7 +220,7 @@ void xbot::service::Service::runProcessing() {
                        "Service too slow to keep up with tick rate.");
       block_time = 0;
     }
-    // If this is ture, we have a rollover (since we should need to wait longer
+    // If this is true, we have a rollover (since we should need to wait longer
     // than the tick length)
     if (heartbeat_micros_ > 0) {
       auto time_to_next_heartbeat = static_cast<int32_t>(
@@ -209,88 +232,54 @@ void xbot::service::Service::runProcessing() {
       }
       block_time = std::min(block_time, time_to_next_heartbeat);
     }
+    if (!is_running_) {
+      // When not running, we need to block shorter than the config request
+      // interval
+      block_time = std::min(
+          block_time,
+          static_cast<long>(config::request_configuration_interval_micros));
+    }
     if (queue::queuePopItem(&packet_queue_, reinterpret_cast<void **>(&packet),
                             block_time)) {
       void *buffer = nullptr;
       size_t used_data = 0;
       if (packet::packetGetData(packet, &buffer, &used_data)) {
         const auto header = reinterpret_cast<datatypes::XbotHeader *>(buffer);
+        const uint8_t *const payload_buffer =
+            reinterpret_cast<uint8_t *>(buffer) + header->payload_size;
 
-        // TODO: filter message type, sender, ...
+        switch (header->message_type) {
+          case datatypes::MessageType::CLAIM:
+            HandleClaimMessage(header, payload_buffer, header->payload_size);
 
-        if (header->message_type == datatypes::MessageType::CLAIM) {
-          ULOG_ARG_INFO(&service_id_, "Received claim message");
-          if (header->payload_size != sizeof(datatypes::ClaimPayload)) {
-            ULOG_ARG_ERROR(&service_id_,
-                           "claim message with invalid payload size");
-          } else {
-            // it's ok, overwrite the target
-            const auto payload_ptr =
-                reinterpret_cast<datatypes::ClaimPayload *>(
-                    static_cast<uint8_t *>(buffer) +
-                    sizeof(datatypes::XbotHeader));
-            target_ip = payload_ptr->target_ip;
-            target_port = payload_ptr->target_port;
-            heartbeat_micros_ = payload_ptr->heartbeat_micros;
-
-            // Send early in order to allow for jitter
-            if (heartbeat_micros_ > config::heartbeat_jitter) {
-              heartbeat_micros_ -= config::heartbeat_jitter;
+            break;
+          case datatypes::MessageType::DATA:
+            if (is_running_) {
+              HandleDataMessage(header, packet, header->payload_size);
             }
-
-            // send heartbeat at twice the requested rate
-            heartbeat_micros_ >>= 1;
-
-            ULOG_ARG_INFO(&service_id_, "service claimed successfully.");
-
-            SendDataClaimAck();
-          }
-        } else if (header->message_type == datatypes::MessageType::DATA) {
-          // Packet seems OK, hand to service
-          handleData(
-              header->arg2,
-              static_cast<uint8_t *>(buffer) + sizeof(datatypes::XbotHeader),
-              header->payload_size);
-        } else if (header->message_type ==
-                   datatypes::MessageType::TRANSACTION) {
-          // Go throguh all data packets in the transaction
-          const auto payload_ptr =
-              static_cast<uint8_t *>(buffer) + sizeof(datatypes::XbotHeader);
-          size_t processed_len = 0;
-          while (processed_len + sizeof(datatypes::DataDescriptor) <=
-                 header->payload_size) {
-            // we have at least enough data for the next descriptor, read it
-            const auto descriptor =
-                reinterpret_cast<datatypes::DataDescriptor *>(payload_ptr +
-                                                              processed_len);
-            size_t data_size = descriptor->payload_size;
-            if (processed_len + sizeof(datatypes::DataDescriptor) + data_size <=
-                header->payload_size) {
-              // we can safely read the data
-              handleData(descriptor->target_id,
-                         payload_ptr + processed_len +
-                             sizeof(datatypes::DataDescriptor),
-                         data_size);
-            } else {
-              // error parsing transaction, header payload size does not match
-              // transaction size!
-              break;
+            break;
+          case datatypes::MessageType::TRANSACTION:
+            if (header->arg1 == 0 && is_running_) {
+              HandleDataTransaction(header, payload_buffer,
+                                    header->payload_size);
+            } else if (header->arg1 == 1) {
+              HandleConfigurationTransaction(header, payload_buffer,
+                                             header->payload_size);
             }
-            processed_len += data_size + sizeof(datatypes::DataDescriptor);
-          }
-
-          if (processed_len != header->payload_size) {
-            ULOG_ARG_ERROR(&service_id_, "Transaction size mismatch");
-          }
+            break;
+          default:
+            ULOG_ARG_WARNING(&service_id_, "Got unsupported message");
+            break;
         }
       }
 
       packet::freePacket(packet);
     }
     uint32_t now = system::getTimeMicros();
-    // Measure time required for the tick() call, so that we can substract
+    // Measure time required for the tick() call, so that we can subtract
     // before next timeout
-    if (static_cast<int32_t>(now - last_tick_micros_) >= tick_rate_micros_) {
+    if (is_running_ &&
+        static_cast<int32_t>(now - last_tick_micros_) >= tick_rate_micros_) {
       last_tick_micros_ = now;
       tick();
     }
@@ -298,7 +287,7 @@ void xbot::service::Service::runProcessing() {
         ((target_ip > 0 && target_port > 0)
              ? config::sd_advertisement_interval_micros
              : config::sd_advertisement_interval_micros_fast)) {
-      ULOG_ARG_DEBUG(&service_id_, "Sending SD advetisement");
+      ULOG_ARG_DEBUG(&service_id_, "Sending SD advertisement");
       advertiseService();
       last_service_discovery_micros_ = now;
     }
@@ -308,5 +297,138 @@ void xbot::service::Service::runProcessing() {
       ULOG_ARG_DEBUG(&service_id_, "Sending heartbeat");
       heartbeat();
     }
+    if (!is_running_ && !isConfigured() &&
+        static_cast<int32_t>(now - last_configuration_request_micros_) >=
+            config::request_configuration_interval_micros) {
+      ULOG_ARG_DEBUG(&service_id_, "Requesting Configuration");
+      SendConfigurationRequest();
+    }
   }
+}
+void xbot::service::Service::HandleClaimMessage(
+    xbot::datatypes::XbotHeader *header, const void *payload,
+    size_t payload_len) {
+  ULOG_ARG_INFO(&service_id_, "Received claim message");
+  if (payload_len != sizeof(datatypes::ClaimPayload)) {
+    ULOG_ARG_ERROR(&service_id_, "claim message with invalid payload size");
+    return;
+  }
+  const auto payload_ptr =
+      reinterpret_cast<const datatypes::ClaimPayload *>(payload);
+  target_ip = payload_ptr->target_ip;
+  target_port = payload_ptr->target_port;
+  heartbeat_micros_ = payload_ptr->heartbeat_micros;
+
+  // Send early in order to allow for jitter
+  if (heartbeat_micros_ > config::heartbeat_jitter) {
+    heartbeat_micros_ -= config::heartbeat_jitter;
+  }
+
+  // send heartbeat at twice the requested rate
+  heartbeat_micros_ >>= 1;
+
+  ULOG_ARG_INFO(&service_id_, "service claimed successfully.");
+
+  SendDataClaimAck();
+}
+void xbot::service::Service::HandleDataMessage(
+    xbot::datatypes::XbotHeader *header, const void *payload,
+    size_t payload_len) {
+  // Packet seems OK, hand to service implementation
+  handleData(header->arg2, payload, header->payload_size);
+}
+void xbot::service::Service::HandleDataTransaction(
+    xbot::datatypes::XbotHeader *header, const void *payload,
+    size_t payload_len) {
+  const auto payload_buffer = static_cast<const uint8_t *>(payload);
+  // Go through all data packets in the transaction
+  size_t processed_len = 0;
+  while (processed_len + sizeof(datatypes::DataDescriptor) <= payload_len) {
+    // we have at least enough data for the next descriptor, read it
+    const auto descriptor = reinterpret_cast<const datatypes::DataDescriptor *>(
+        payload_buffer + processed_len);
+    size_t data_size = descriptor->payload_size;
+    if (processed_len + sizeof(datatypes::DataDescriptor) + data_size <=
+        payload_len) {
+      // we can safely read the data
+      handleData(
+          descriptor->target_id,
+          payload_buffer + processed_len + sizeof(datatypes::DataDescriptor),
+          data_size);
+    } else {
+      // error parsing transaction, payload size does not match
+      // transaction size!
+      break;
+    }
+    processed_len += data_size + sizeof(datatypes::DataDescriptor);
+  }
+
+  if (processed_len != payload_len) {
+    ULOG_ARG_ERROR(&service_id_, "Transaction size mismatch");
+  }
+}
+void xbot::service::Service::HandleConfigurationTransaction(
+    xbot::datatypes::XbotHeader *header, const void *payload,
+    size_t payload_len) {
+  // Call clean up callback, if service was running
+  if (is_running_) {
+    OnStop();
+  }
+  clearConfiguration();
+  is_running_ = false;
+
+  bool register_success = true;
+  // Set the registers
+  const auto payload_buffer = static_cast<const uint8_t *>(payload);
+  // Go through all data packets in the transaction
+  size_t processed_len = 0;
+  while (processed_len + sizeof(datatypes::DataDescriptor) <= payload_len) {
+    // we have at least enough data for the next descriptor, read it
+    const auto descriptor = reinterpret_cast<const datatypes::DataDescriptor *>(
+        payload_buffer + processed_len);
+    size_t data_size = descriptor->payload_size;
+    if (processed_len + sizeof(datatypes::DataDescriptor) + data_size <=
+        payload_len) {
+      // we can safely read the data
+      register_success &= setRegister(
+          descriptor->target_id,
+          payload_buffer + processed_len + sizeof(datatypes::DataDescriptor),
+          data_size);
+    } else {
+      // error parsing transaction, payload size does not match
+      // transaction size!
+      break;
+    }
+    processed_len += data_size + sizeof(datatypes::DataDescriptor);
+  }
+
+  if (processed_len != payload_len) {
+    ULOG_ARG_ERROR(&service_id_, "Transaction size mismatch");
+  }
+
+  // regster_success checks if all new config was applied correctly,
+  // isConfigured() checks if overall config is correct
+  if (register_success && isConfigured()) {
+    // successfully set all registers, start the service
+    Configure();
+    OnStart();
+    is_running_ = true;
+  }
+}
+bool xbot::service::Service::SendConfigurationRequest() {
+  // Send header and data
+  packet::PacketPtr ptr = packet::allocatePacket();
+
+  {
+    Lock lk(&state_mutex_);
+    fillHeader();
+    header_.message_type = datatypes::MessageType::CONFIGURATION_REQUEST;
+    header_.payload_size = 0;
+    header_.arg1 = 0;
+
+    packet::packetAppendData(ptr, &header_, sizeof(header_));
+  }
+  sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
+  last_configuration_request_micros_ = system::getTimeMicros();
+  return true;
 }

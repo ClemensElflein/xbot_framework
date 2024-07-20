@@ -54,9 +54,9 @@ class Service : public ServiceIo {
   // Track, if we have already started a transaction
   bool transaction_started_ = false;
 
-  // Scratch space for the header. This will only ever be accessed in the
-  // process_thread, so we don't need a mutex Don't make it static, so that
-  // multiple services can build packets in parallel (it will happen often)
+  // Scratch space for the header.
+  // Needs to be protected by a mutex, becuase SendData might
+  // be called from a different thread
   datatypes::XbotHeader header_{};
 
   bool SendData(uint16_t target_id, const void *data, size_t size);
@@ -64,6 +64,22 @@ class Service : public ServiceIo {
   bool StartTransaction(uint64_t timestamp = 0);
 
   bool CommitTransaction();
+
+  /**
+   * Called before OnStart
+   * @return true, if configuration was success
+   */
+  virtual bool Configure() = 0;
+
+  /**
+   * Called after successfully Configure() and before tick() starts
+   */
+  virtual void OnStart() = 0;
+
+  /**
+   * Called before reconfiguring the service for cleanup
+   */
+  virtual void OnStop() = 0;
 
  private:
   /**
@@ -81,21 +97,43 @@ class Service : public ServiceIo {
   uint32_t heartbeat_micros_ = 0;
   uint32_t target_ip = 0;
   uint32_t target_port = 0;
+  uint32_t last_configuration_request_micros_ = 0;
+
+  // True, when the service is running (i.e. configured and tick() is being
+  // called)
+  bool is_running_ = 0;
 
   void heartbeat();
 
   void runProcessing();
 
+  void HandleClaimMessage(datatypes::XbotHeader *header, const void *payload,
+                          size_t payload_len);
+  void HandleDataMessage(datatypes::XbotHeader *header, const void *payload,
+                         size_t payload_len);
+  void HandleDataTransaction(datatypes::XbotHeader *header, const void *payload,
+                             size_t payload_len);
+  void HandleConfigurationTransaction(datatypes::XbotHeader *header,
+                                      const void *payload, size_t payload_len);
+
   void fillHeader();
 
   bool SendDataClaimAck();
+  bool SendConfigurationRequest();
 
   virtual void tick() = 0;
 
   virtual bool advertiseService() = 0;
 
+  // Return true, if the service is configured properly
+  virtual bool isConfigured() = 0;
+  virtual void clearConfiguration() = 0;
+
   virtual bool handleData(uint16_t target_id, const void *payload,
                           size_t length) = 0;
+
+  virtual bool setRegister(uint16_t target_id, const void *payload,
+                           size_t length) = 0;
 };
 }  // namespace xbot::service
 

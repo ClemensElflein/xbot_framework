@@ -15,8 +15,9 @@ enum class MessageType : uint8_t {
   UNKNOWN = 0x00,
   // Use DATA for inputs and outputs.
   DATA = 0x01,
-  // Use Configuration for setting the service registers.
-  CONFIGURATION = 0x02,
+  // Use CONFIGURATION_REQUEST is sent by the service when it needs
+  // configuration
+  CONFIGURATION_REQUEST = 0x02,
   // User CLAIM in order to claim a service. Payload is IP (uint32_t) and
   // port(uint16_t). Service will reply with CLAM with arg1 == true for ack
   CLAIM = 0x03,
@@ -46,6 +47,8 @@ struct XbotHeader {
   // least once)
   uint8_t flags{};
   // Reserved for message specific payload (e.g. log level for log message)
+  // Log Message: Log level
+  // Transaction: Type: 0 = Data transaction, 1 = Configuration Transaction
   uint8_t arg1{};
   // Reserved for message specific payload (e.g. target_id for data message)
   uint16_t arg2{};

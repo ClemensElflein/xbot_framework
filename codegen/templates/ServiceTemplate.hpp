@@ -144,7 +144,10 @@ private:
     bool reboot = true;
     bool handleData(uint16_t target_id, const void *payload, size_t length) override final;
     bool advertiseService() override final;
-
+    bool isConfigured() override final;
+    void clearConfiguration() override final;
+    bool setRegister(uint16_t target_id, const void *payload,
+                          size_t length)override final;
 
 protected:
     /*[[[cog
@@ -169,6 +172,30 @@ protected:
     ]]]*/
     bool SendExampleOutput1(const char* data, uint32_t length);
     bool SendExampleOutput2(const uint32_t &data);
+    //[[[end]]]
+    
+    /*[[[cog
+    # Generate register struct
+
+    for register in service["registers"]:
+      cog.outl("struct {");
+      if register['is_array']:
+          cog.outl(f"{register['type']} value[{register ['max_length']}];")
+          cog.outl("size_t length = 0;")
+      else:
+          cog.outl(f"{register['type']} value;")
+      cog.outl("bool valid = false;")
+      cog.outl(f"}} {register['name']};");
+    ]]]*/
+    struct {
+    char value[42];
+    size_t length = 0;
+    bool valid = false;
+    } Register1;
+    struct {
+    uint32_t value;
+    bool valid = false;
+    } Register2;
     //[[[end]]]
 };
 

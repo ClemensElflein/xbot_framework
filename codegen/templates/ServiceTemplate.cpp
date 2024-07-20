@@ -217,3 +217,86 @@ bool ServiceTemplateBase::SendExampleOutput2(const uint32_t &data) {
     return SendData(1, &data, sizeof(uint32_t));
 }
 //[[[end]]]
+
+/*[[[cog
+    # Generate configured check
+    cog.outl(f"bool {service['class_name']}::isConfigured() {{")
+    for register in service["registers"]:
+        cog.outl(f"if(!this->{register['name']}.valid) {{return false;}}")
+    cog.outl("return true;")
+    cog.outl("}")
+]]]*/
+bool ServiceTemplateBase::isConfigured() {
+if(!this->Register1.valid) {return false;}
+if(!this->Register2.valid) {return false;}
+return true;
+}
+//[[[end]]]
+
+/*[[[cog
+    # Generate config reset
+    cog.outl(f"void {service['class_name']}::clearConfiguration() {{")
+    for register in service["registers"]:
+        cog.outl(f"this->{register['name']}.valid = false;")
+    cog.outl("}")
+]]]*/
+void ServiceTemplateBase::clearConfiguration() {
+this->Register1.valid = false;
+this->Register2.valid = false;
+}
+//[[[end]]]
+
+
+/*[[[cog
+cog.outl(f"bool {service['class_name']}::setRegister(uint16_t target_id, const void *payload, size_t length) {{")
+]]]*/
+bool ServiceTemplateBase::setRegister(uint16_t target_id, const void *payload, size_t length) {
+  //[[[end]]]
+
+
+  // Call the callback for this input
+  switch (target_id) {
+    /*[[[cog
+    for r in service['registers']:
+        cog.outl(f"case {r['id']}:");
+        if r['is_array']:
+            cog.outl(f"if(length % sizeof({r['type']}) != 0 || length > sizeof({r['name']}.value)) {{");
+            cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data size\");");
+            cog.outl("    return false;");
+            cog.outl("}");
+            cog.outl(f"{r['name']}.length = length/sizeof({r['type']});")
+            cog.outl(f"memcpy(&{r['name']}.value, payload, length);")
+            cog.outl(f"{r['name']}.valid = true;")
+            cog.outl("return true;")
+        else:
+            cog.outl(f"if(length != sizeof({r['name']}.value)) {{");
+            cog.outl("    ULOG_ARG_ERROR(&service_id_, \"Invalid data size\");");
+            cog.outl("    return false;");
+            cog.outl("}");
+            cog.outl(f"memcpy(&{r['name']}.value, payload, length);")
+            cog.outl(f"{r['name']}.valid = true;")
+            cog.outl("return true;")
+    ]]]*/
+    case 0:
+    if(length % sizeof(char) != 0 || length > sizeof(Register1.value)) {
+        ULOG_ARG_ERROR(&service_id_, "Invalid data size");
+        return false;
+    }
+    Register1.length = length/sizeof(char);
+    memcpy(&Register1.value, payload, length);
+    Register1.valid = true;
+    return true;
+    case 1:
+    if(length != sizeof(Register2.value)) {
+        ULOG_ARG_ERROR(&service_id_, "Invalid data size");
+        return false;
+    }
+    memcpy(&Register2.value, payload, length);
+    Register2.valid = true;
+    return true;
+    //[[[end]]]
+    default:
+      return false;
+  }
+  return false;
+}

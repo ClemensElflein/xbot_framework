@@ -41,6 +41,9 @@ static constexpr uint32_t sd_advertisement_interval_micros = 10000000;
 // claimed.
 static constexpr uint32_t sd_advertisement_interval_micros_fast = 1000000;
 
+// Time between request_configuration messages
+static constexpr uint32_t request_configuration_interval_micros = 1000000;
+
 /**
  * Default heartbeat value, a different value can be requested by the service
  * interface.
