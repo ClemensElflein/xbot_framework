@@ -40,6 +40,7 @@ class PlotJugglerBridge : public serviceif::ServiceDiscoveryCallbacks,
   void OnData(const std::string &uid, uint64_t timestamp, uint16_t target_id,
               const void *payload, size_t buflen) override;
   void OnServiceDisconnected(const std::string &uid) override;
+  bool OnConfigurationRequested(const std::string &uid) override;
 
  private:
   std::mutex state_mutex_{};

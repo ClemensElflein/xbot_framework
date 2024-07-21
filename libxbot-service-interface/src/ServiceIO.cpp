@@ -214,7 +214,6 @@ void ServiceIO::RunIo() {
       if (packet.size() >= sizeof(datatypes::XbotHeader)) {
         const auto header =
             reinterpret_cast<datatypes::XbotHeader *>(packet.data());
-
         if (header->payload_size !=
             packet.size() - sizeof(datatypes::XbotHeader)) {
           spdlog::error("Got packet with invalid size");
@@ -222,127 +221,37 @@ void ServiceIO::RunIo() {
         }
         uint64_t key = BuildKey(sender_ip, sender_port);
 
-        if (header->message_type == datatypes::MessageType::CLAIM) {
-          if (header->arg1 != 1) {
-            // Not actually an ack
-            spdlog::warn("received claim ack without arg1==1");
-            continue;
-          }
-          {
-            std::unique_lock lk{state_mutex_};
-            if (!endpoint_map_.contains(key)) {
-              spdlog::warn("received claim ack from wrong service");
-              continue;
-            }
-            const auto &ptr = endpoint_map_.at(key);
-            // Also count the ack as heartbeat in order to not instantly timeout
-            ptr->last_heartbeat_received_ = std::chrono::steady_clock::now();
+        const uint8_t *const payload_buffer =
+            packet.data() + sizeof(datatypes::XbotHeader);
 
-            if (ptr->claimed_successfully_) {
-              spdlog::warn("claim ack from already claimed service");
-              continue;
+        switch (header->message_type) {
+          case datatypes::MessageType::CLAIM:
+            HandleClaimMessage(key, header, payload_buffer,
+                               header->payload_size);
+            break;
+          case datatypes::MessageType::DATA:
+            HandleDataMessage(key, header, payload_buffer,
+                              header->payload_size);
+            break;
+          case datatypes::MessageType::CONFIGURATION_REQUEST:
+            HandleConfigurationRequest(key, header, payload_buffer,
+                                       header->payload_size);
+            break;
+          case datatypes::MessageType::HEARTBEAT:
+            HandleHeartbeatMessage(key, header, payload_buffer,
+                                   header->payload_size);
+            break;
+          case datatypes::MessageType::TRANSACTION:
+            if (header->arg1 == 0) {
+              HandleDataTransaction(key, header, payload_buffer,
+                                    header->payload_size);
+            } else {
+              spdlog::warn("Got transaction with unknown type");
             }
-            ptr->claimed_successfully_ = true;
-            spdlog::info("Successfully claimed service");
-
-            // Notify callbacks for that service
-            if (const auto it = registered_callbacks_.find(ptr->uid);
-                it != registered_callbacks_.end()) {
-              for (const auto &cb : it->second) {
-                cb->OnServiceConnected(ptr->uid);
-              }
-            }
-          }
-        } else if (header->message_type == datatypes::MessageType::HEARTBEAT) {
-          {
-            std::unique_lock lk{state_mutex_};
-            if (!endpoint_map_.contains(key)) {
-              spdlog::warn("received heartbeat from wrong service");
-              continue;
-            }
-            endpoint_map_.at(key)->last_heartbeat_received_ =
-                std::chrono::steady_clock::now();
-          }
-        } else if (header->message_type == datatypes::MessageType::DATA) {
-          {
-            std::unique_lock lk{state_mutex_};
-            if (!endpoint_map_.contains(key)) {
-              spdlog::warn("got data from wrong service");
-              continue;
-            }
-            if (!endpoint_map_.at(key)->claimed_successfully_) {
-              spdlog::warn("Got data from an unclaimed service, dropping it.");
-              continue;
-            }
-          }
-          const auto payload_ptr =
-              packet.data() + sizeof(datatypes::XbotHeader);
-          const auto &ptr = endpoint_map_.at(key);
-
-          // Notify callbacks for that service
-          if (const auto it = registered_callbacks_.find(ptr->uid);
-              it != registered_callbacks_.end()) {
-            for (const auto &cb : it->second) {
-              cb->OnData(ptr->uid, header->timestamp, header->arg2, payload_ptr,
-                         header->payload_size);
-            }
-          }
-        } else if (header->message_type ==
-                   datatypes::MessageType::TRANSACTION) {
-          {
-            std::unique_lock lk{state_mutex_};
-            if (!endpoint_map_.contains(key)) {
-              spdlog::warn("got data from wrong service");
-              continue;
-            }
-            if (!endpoint_map_.at(key)->claimed_successfully_) {
-              spdlog::warn("Got data from an unclaimed service, dropping it.");
-              continue;
-            }
-          }
-          const auto payload_ptr =
-              packet.data() + sizeof(datatypes::XbotHeader);
-          const auto &state_ptr = endpoint_map_.at(key);
-
-          // Notify callbacks for that service
-          if (const auto it = registered_callbacks_.find(state_ptr->uid);
-              it != registered_callbacks_.end()) {
-            for (const auto &cb : it->second) {
-              cb->OnTransactionStart(header->timestamp);
-              // Go throguh all data packets in the transaction
-              size_t processed_len = 0;
-              while (processed_len + sizeof(datatypes::DataDescriptor) <=
-                     header->payload_size) {
-                // we have at least enough data for the next descriptor, read it
-                const auto descriptor =
-                    reinterpret_cast<datatypes::DataDescriptor *>(
-                        payload_ptr + processed_len);
-                size_t data_size = descriptor->payload_size;
-                if (processed_len + sizeof(datatypes::DataDescriptor) +
-                        data_size <=
-                    header->payload_size) {
-                  // we can safely read the data
-                  cb->OnData(state_ptr->uid, header->timestamp,
-                             descriptor->target_id,
-                             payload_ptr + processed_len +
-                                 sizeof(datatypes::DataDescriptor),
-                             data_size);
-                } else {
-                  spdlog::error(
-                      "Error parsing transaction, header payload size does not "
-                      "match transaction size!");
-                  break;
-                }
-                processed_len += data_size + sizeof(datatypes::DataDescriptor);
-              }
-
-              if (processed_len != header->payload_size) {
-                spdlog::warn("Transaction size mismatch!");
-              }
-
-              cb->OnTransactionEnd();
-            }
-          }
+            break;
+          default:
+            spdlog::warn("Got message of unknown type");
+            break;
         }
       }
     }
@@ -350,17 +259,13 @@ void ServiceIO::RunIo() {
 }
 
 void ServiceIO::ClaimService(uint64_t key) {
-  state_mutex_.lock();
+  std::unique_lock lk{state_mutex_};
   if (!endpoint_map_.contains(key)) {
     // Cannot try to claim a service which was not even discovered
     spdlog::error("Tried to claim a service which was not in the endpoint map");
-    state_mutex_.unlock();
     return;
   }
   const auto &state = endpoint_map_.at(key);
-  // Can unlock here, because even if the endpoint changes, the state remains at
-  // the same location
-  state_mutex_.unlock();
 
   // Check, if we recently sent the claim. If not, try again
   auto now = std::chrono::steady_clock::now();
@@ -414,4 +319,168 @@ bool ServiceIO::TransmitPacket(uint64_t key, const std::vector<uint8_t> &data) {
     return false;
   }
   return io_socket_.TransmitPacket(service_ip, service_port, data);
+}
+void ServiceIO::HandleClaimMessage(uint64_t key,
+                                   xbot::datatypes::XbotHeader *header,
+                                   const uint8_t *payload, size_t payload_len) {
+  if (header->arg1 != 1) {
+    // Not actually an ack
+    spdlog::warn("received claim ack without arg1==1");
+    return;
+  }
+
+  std::unique_lock lk{state_mutex_};
+  if (!endpoint_map_.contains(key)) {
+    spdlog::warn("received claim ack from wrong service");
+    return;
+  }
+  const auto &ptr = endpoint_map_.at(key);
+  // Also count the ack as heartbeat in order to not instantly timeout
+  ptr->last_heartbeat_received_ = std::chrono::steady_clock::now();
+
+  if (ptr->claimed_successfully_) {
+    spdlog::warn("claim ack from already claimed service");
+    return;
+  }
+  ptr->claimed_successfully_ = true;
+  spdlog::info("Successfully claimed service");
+
+  // Notify callbacks for that service
+  if (const auto it = registered_callbacks_.find(ptr->uid);
+      it != registered_callbacks_.end()) {
+    for (const auto &cb : it->second) {
+      cb->OnServiceConnected(ptr->uid);
+    }
+  }
+}
+void ServiceIO::HandleDataMessage(uint64_t key,
+                                  xbot::datatypes::XbotHeader *header,
+                                  const uint8_t *payload, size_t payload_len) {
+  {
+    std::unique_lock lk{state_mutex_};
+    if (!endpoint_map_.contains(key)) {
+      spdlog::debug("got data from wrong service");
+      return;
+    }
+    if (!endpoint_map_.at(key)->claimed_successfully_) {
+      spdlog::debug("Got data from an unclaimed service, dropping it.");
+      return;
+    }
+  }
+  const auto &ptr = endpoint_map_.at(key);
+
+  // Notify callbacks for that service
+  if (const auto it = registered_callbacks_.find(ptr->uid);
+      it != registered_callbacks_.end()) {
+    for (const auto &cb : it->second) {
+      cb->OnData(ptr->uid, header->timestamp, header->arg2, payload,
+                 header->payload_size);
+    }
+  }
+}
+void ServiceIO::HandleDataTransaction(uint64_t key,
+                                      xbot::datatypes::XbotHeader *header,
+                                      const uint8_t *payload,
+                                      size_t payload_len) {
+  {
+    std::unique_lock lk{state_mutex_};
+    if (!endpoint_map_.contains(key)) {
+      // This happens if we restart the interface and an unknown service sends
+      // us data.
+      spdlog::debug("got data from wrong service");
+      return;
+    }
+    if (!endpoint_map_.at(key)->claimed_successfully_) {
+      // This happens if we restart the interface and a previously claimed
+      // service is still sending data.
+      spdlog::debug("Got data from an unclaimed service, dropping it.");
+      return;
+    }
+  }
+  const auto &state_ptr = endpoint_map_.at(key);
+
+  // Notify callbacks for that service
+  if (const auto it = registered_callbacks_.find(state_ptr->uid);
+      it != registered_callbacks_.end()) {
+    for (const auto &cb : it->second) {
+      cb->OnTransactionStart(header->timestamp);
+      // Go through all data packets in the transaction
+      size_t processed_len = 0;
+      while (processed_len + sizeof(datatypes::DataDescriptor) <=
+             header->payload_size) {
+        // we have at least enough data for the next descriptor, read it
+        const auto descriptor =
+            reinterpret_cast<const datatypes::DataDescriptor *>(payload +
+                                                                processed_len);
+        size_t data_size = descriptor->payload_size;
+        if (processed_len + sizeof(datatypes::DataDescriptor) + data_size <=
+            header->payload_size) {
+          // we can safely read the data
+          cb->OnData(
+              state_ptr->uid, header->timestamp, descriptor->target_id,
+              payload + processed_len + sizeof(datatypes::DataDescriptor),
+              data_size);
+        } else {
+          spdlog::error(
+              "Error parsing transaction, header payload size does not "
+              "match transaction size!");
+          break;
+        }
+        processed_len += data_size + sizeof(datatypes::DataDescriptor);
+      }
+
+      if (processed_len != header->payload_size) {
+        spdlog::warn("Transaction size mismatch!");
+      }
+
+      cb->OnTransactionEnd();
+    }
+  }
+}
+void ServiceIO::HandleHeartbeatMessage(uint64_t key,
+                                       xbot::datatypes::XbotHeader *header,
+                                       const uint8_t *payload,
+                                       size_t payload_len) {
+  std::unique_lock lk{state_mutex_};
+  if (!endpoint_map_.contains(key)) {
+    spdlog::warn("received heartbeat from wrong service");
+    return;
+  }
+  endpoint_map_.at(key)->last_heartbeat_received_ =
+      std::chrono::steady_clock::now();
+}
+void ServiceIO::HandleConfigurationRequest(uint64_t key,
+                                           xbot::datatypes::XbotHeader *header,
+                                           const uint8_t *payload,
+                                           size_t payload_len) {
+  std::unique_lock lk{state_mutex_};
+  if (!endpoint_map_.contains(key)) {
+    spdlog::debug("got config request from wrong service");
+    return;
+  }
+  if (!endpoint_map_.at(key)->claimed_successfully_) {
+    spdlog::debug("Got config request from an unclaimed service, dropping it.");
+    return;
+  }
+
+  const auto &ptr = endpoint_map_.at(key);
+
+  // Notify callbacks for that service
+  bool configuration_handled = false;
+  if (const auto it = registered_callbacks_.find(ptr->uid);
+      it != registered_callbacks_.end()) {
+    for (const auto &cb : it->second) {
+      if (cb->OnConfigurationRequested(ptr->uid)) {
+        configuration_handled = true;
+        break;
+      }
+    }
+  }
+  if (!configuration_handled) {
+    spdlog::warn(
+        "service {} requires configuration, but no handler provided any "
+        "configuration. "
+        "The service won't start.",
+        ptr->uid);
+  }
 }

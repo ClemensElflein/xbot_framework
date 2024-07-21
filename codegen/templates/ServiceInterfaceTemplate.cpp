@@ -1,3 +1,5 @@
+// @formatter:off
+// clang-format off
 //
 // Created by clemens on 4/23/24.
 //
@@ -60,17 +62,36 @@ void ServiceTemplateInterfaceBase::OnData(const std::string &uid, uint64_t times
         return;
 }
 
+/*[[[cog
+# Generate send function implementations.
+for register in service["registers"]:
+    if register['is_array']:
+        cog.outl(f"bool {service['interface_class_name']}::{register['method_name']}(const {register['type']}* data, uint32_t length) {{")
+        cog.outl(f"    return SendData({register['id']}, data, length*sizeof({register['type']}), true);")
+        cog.outl("}")
+    else:
+        cog.outl(f"bool {service['interface_class_name']}::{register['method_name']}(const {register['type']} &data) {{")
+        cog.outl(f"    return SendData({register['id']}, &data, sizeof({register['type']}), true);")
+        cog.outl("}")
+]]]*/
+bool ServiceTemplateInterfaceBase::SetRegisterRegister1(const char* data, uint32_t length) {
+    return SendData(0, data, length*sizeof(char));
+}
+bool ServiceTemplateInterfaceBase::SetRegisterRegister2(const uint32_t &data) {
+    return SendData(1, &data, sizeof(uint32_t));
+}
+//[[[end]]]
 
 /*[[[cog
 # Generate send function implementations.
 for input in service["inputs"]:
     if input['is_array']:
         cog.outl(f"bool {service['interface_class_name']}::{input['method_name']}(const {input['type']}* data, uint32_t length) {{")
-        cog.outl(f"    return SendData({input['id']}, data, length*sizeof({input['type']}));")
+        cog.outl(f"    return SendData({input['id']}, data, length*sizeof({input['type']}), false);")
         cog.outl("}")
     else:
         cog.outl(f"bool {service['interface_class_name']}::{input['method_name']}(const {input['type']} &data) {{")
-        cog.outl(f"    return SendData({input['id']}, &data, sizeof({input['type']}));")
+        cog.outl(f"    return SendData({input['id']}, &data, sizeof({input['type']}), false);")
         cog.outl("}")
 ]]]*/
 bool ServiceTemplateInterfaceBase::SendExampleInput1(const char* data, uint32_t length) {

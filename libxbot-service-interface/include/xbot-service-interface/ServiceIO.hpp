@@ -59,6 +59,13 @@ class ServiceIOCallbacks {
                       size_t buflen) = 0;
 
   /**
+   * Called whenever a service needs configuration. Whenever this is called,
+   * send a configuration transaction to the requesting service
+   * @param uid service uid
+   */
+  virtual bool OnConfigurationRequested(const std::string &uid) = 0;
+
+  /**
    * Called whenever a service is disconnected.
    * This could be due to timeout. After this OnData won't be called anymore
    * with the uid. Note that OnServiceConnected might be called on reconnection.
@@ -123,6 +130,21 @@ class ServiceIO : public ServiceDiscoveryCallbacks {
   static void ClaimService(uint64_t key);
 
   static bool TransmitPacket(uint64_t key, const std::vector<uint8_t> &data);
+
+  static void HandleClaimMessage(uint64_t key, datatypes::XbotHeader *header,
+                                 const uint8_t *payload, size_t payload_len);
+  static void HandleDataMessage(uint64_t key, datatypes::XbotHeader *header,
+                                const uint8_t *payload, size_t payload_len);
+  static void HandleDataTransaction(uint64_t key, datatypes::XbotHeader *header,
+                                    const uint8_t *payload, size_t payload_len);
+  static void HandleHeartbeatMessage(uint64_t key,
+                                     datatypes::XbotHeader *header,
+                                     const uint8_t *payload,
+                                     size_t payload_len);
+  static void HandleConfigurationRequest(uint64_t key,
+                                         datatypes::XbotHeader *header,
+                                         const uint8_t *payload,
+                                         size_t payload_len);
 };
 }  // namespace xbot::serviceif
 

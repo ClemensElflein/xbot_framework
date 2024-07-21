@@ -29,16 +29,17 @@ class ServiceInterfaceBase : public xbot::serviceif::ServiceIOCallbacks,
   // uid of the bound service
   std::string uid_{};
 
-  bool StartTransaction();
+  bool StartTransaction(bool is_configuration = false);
 
   bool CommitTransaction();
 
-  bool SendData(uint16_t target_id, const void *data, size_t size);
+  bool SendData(uint16_t target_id, const void *data, size_t size,
+                bool is_configuration);
 
  public:
-  bool OnServiceDiscovered(std::string uid) override;
+  bool OnServiceDiscovered(std::string uid) final;
   bool OnEndpointChanged(std::string uid, uint32_t old_ip, uint16_t old_port,
-                         uint32_t new_ip, uint16_t new_port) override;
+                         uint32_t new_ip, uint16_t new_port) final;
 
  private:
   void FillHeader();
@@ -47,7 +48,9 @@ class ServiceInterfaceBase : public xbot::serviceif::ServiceIOCallbacks,
   xbot::datatypes::XbotHeader header_{};
   std::vector<uint8_t> buffer_{};
   bool transaction_started_{false};
-  std::mutex state_mutex_{};
+  bool is_configuration_transaction_{false};
+
+  std::recursive_mutex state_mutex_{};
 };
 }  // namespace xbot::serviceif
 

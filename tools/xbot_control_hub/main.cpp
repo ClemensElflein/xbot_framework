@@ -24,9 +24,21 @@ class EchoServiceInterface : public EchoServiceInterfaceBase {
       : EchoServiceInterfaceBase(service_id) {}
 
  protected:
+ public:
+  bool OnConfigurationRequested(const std::string &uid) override {
+    spdlog::info("Config Requested");
+    std::string prefix = "Some Prefix";
+    StartTransaction(true);
+    SetRegisterPrefix(prefix.c_str(), prefix.length());
+    SetRegisterEchoCount(2);
+    CommitTransaction();
+    return true;
+  }
+
+ protected:
   void OnEchoChanged(const char *new_value, uint32_t length) override {
     std::string e = std::string(new_value, length);
-    // spdlog::info("Got echo {}", e);
+    spdlog::info("Got echo {}", e);
     if (e.starts_with("this is a test message ")) {
       std::lock_guard<std::mutex> lock(m);
       last_echo = e;

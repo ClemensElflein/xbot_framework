@@ -168,13 +168,21 @@ void PlotJugglerBridge::OnData(const std::string& uid, uint64_t timestamp,
     }
   }
 
-  nlohmann::json json = nlohmann::json::object(
-      {{uid, {{output.name, {{"stamp", timestamp}, {"data", data}}}}}});
-  std::string dump = json.dump(2);
-  socket_.TransmitPacket("127.0.0.1", 9870,
-                         reinterpret_cast<const uint8_t*>(dump.c_str()),
-                         dump.size());
+  try {
+    nlohmann::json json = nlohmann::json::object(
+        {{uid, {{output.name, {{"stamp", timestamp}, {"data", data}}}}}});
+    std::string dump = json.dump(2);
+    socket_.TransmitPacket("127.0.0.1", 9870,
+                           reinterpret_cast<const uint8_t*>(dump.c_str()),
+                           dump.size());
+  } catch (std::exception& e) {
+    spdlog::error("PJB: Error encoding JSON: {}", e.what());
+  }
 }
 void PlotJugglerBridge::OnServiceDisconnected(const std::string& uid) {
   spdlog::info("PJB: OnServiceDisconnected");
+}
+bool PlotJugglerBridge::OnConfigurationRequested(const std::string& uid) {
+  spdlog::info("PJB: OnConfigurationRequested");
+  return false;
 }

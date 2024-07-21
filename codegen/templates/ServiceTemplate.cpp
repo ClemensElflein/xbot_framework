@@ -1,3 +1,5 @@
+// @formatter:off
+// clang-format off
 //
 // Created by clemens on 4/23/24.
 //

@@ -1,3 +1,5 @@
+// @formatter:off
+// clang-format off
 //
 // Created by clemens on 4/23/24.
 //
@@ -48,6 +50,18 @@ public:
     ]]]*/
     bool SendExampleInput1(const char* data, uint32_t length);
     bool SendExampleInput2(const uint32_t &data);
+    //[[[end]]]
+
+    /*[[[cog
+    # Generate send functions for each register.
+    for register in service["registers"]:
+        if register['is_array']:
+            cog.outl(f"bool {register['method_name']}(const {register['type']}* data, uint32_t length);")
+        else:
+            cog.outl(f"bool {register['method_name']}(const {register['type']} &data);")
+    ]]]*/
+    bool SetRegisterRegister1(const char* data, uint32_t length);
+    bool SetRegisterRegister2(const uint32_t &data);
     //[[[end]]]
 
 protected:
