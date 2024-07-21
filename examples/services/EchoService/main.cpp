@@ -6,7 +6,7 @@
 #include <mutex>
 #include <xbot-service/Io.hpp>
 
-#include "TransactionalService.hpp"
+#include "EchoService.hpp"
 #include "xbot-service/RemoteLogging.hpp"
 #include "xbot-service/portable/system.hpp"
 
@@ -18,12 +18,12 @@ void console_logger(ulog_level_t severity, char* msg, const void* arg) {
 
 int main() {
   xbot::service::system::initSystem();
+
 #ifdef ULOG_ENABLED
   ULOG_SUBSCRIBE(console_logger, ULOG_DEBUG_LEVEL);
 #endif
 
-  startRemoteLogging();
-  TransactionalService service{2};
+  EchoService service{1};
 
   service.start();
 

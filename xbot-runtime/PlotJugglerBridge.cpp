@@ -177,7 +177,6 @@ void PlotJugglerBridge::OnServiceDisconnected(const std::string& uid) {
   spdlog::info("PJB: OnServiceDisconnected");
 }
 bool PlotJugglerBridge::OnConfigurationRequested(const std::string& uid) {
-  spdlog::info("PJB: OnConfigurationRequested");
   return false;
 }
 PlotJugglerBridge::PlotJugglerBridge(xbot::serviceif::Context ctx) : ctx(ctx) {

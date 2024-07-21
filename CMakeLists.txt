@@ -1,9 +1,14 @@
 cmake_minimum_required(VERSION 3.22)
 project(xbot_framework C CXX)
 
+# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+    cmake_policy(SET CMP0135 NEW)
+endif ()
 
-if (XBOT_BUILD_APPS)
-    message("Building Apps")
+
+if (XBOT_BUILD_RUNTIME)
+    message("Building Runtime")
     set(XBOT_BUILD_LIB_SERVICE_INTERFACE ON)
 endif ()
 
@@ -25,12 +30,11 @@ if (XBOT_BUILD_LIB_SERVICE_INTERFACE)
     add_subdirectory(libxbot-service-interface)
 endif ()
 
-if (XBOT_BUILD_APPS)
-    add_subdirectory(tools/xbot_control_hub)
+if (XBOT_BUILD_RUNTIME)
+    add_subdirectory(xbot-runtime)
 endif ()
 
 
 if (XBOT_BUILD_EXAMPLES)
-    add_subdirectory(example)
-    add_subdirectory(example_interface_plugins)
+    add_subdirectory(examples)
 endif ()

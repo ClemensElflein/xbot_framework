@@ -20,5 +20,4 @@ set(Python3_EXECUTABLE "${Python3_EXECUTABLE}" CACHE PATH "Path to Pyhton 3 venv
 set(ZCBOR_CODEGEN_EXECUTABLE "${PROJECT_BINARY_DIR}/.venv/bin/zcbor" CACHE PATH "Path to zcbor codegen")
 
 include(cmake/AddService.cmake)
-include(cmake/AddMessage.cmake)
 include(cmake/AddServiceInterface.cmake)

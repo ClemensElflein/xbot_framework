@@ -1,3 +1,4 @@
 cmake-build-debug/
 codegen/xbot_codegen/__pycache__
 build/
+venv/

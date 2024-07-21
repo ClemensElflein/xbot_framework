@@ -19,7 +19,7 @@ if (XBOT_BUILD_LIB_SERVICE_INTERFACE)
     add_subdirectory(spdlog)
 endif ()
 
-if (XBOT_BUILD_APPS)
+if (XBOT_BUILD_RUNTIME)
     add_subdirectory(crow)
     add_subdirectory(cli)
 endif ()

@@ -65,13 +65,13 @@ int main() {
 
   PlotJugglerBridge pjb{ctx};
 
-  std::string plugin_dirs = std::getenv("XBOT_PLUGIN_DIRS");
+  const char *XBOT_PLUGIN_DIR = std::getenv("XBOT_PLUGIN_DIR");
 
-  loadPlugins(
-      "/home/clemens/Dev/xbot_framework/xbot_framework/build/Debug/"
-      "example_interface_plugins/"
-      "EchoServicePlugin",
-      ctx);
+  if (XBOT_PLUGIN_DIR) {
+    loadPlugins(XBOT_PLUGIN_DIR, ctx);
+  } else {
+    loadPlugins(".", ctx);
+  }
 
   ioImpl->Start();
   sdImpl->Start();

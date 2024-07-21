@@ -38,28 +38,46 @@ robotics ecosystem.
     - **REST API:** Discover services programmatically. (Status: Working)
     - **Plugin System:** Write an application-specific plugin which gets loaded by the runtime to bridge to your
       high-level code.
+- **🚀 Performant Serialization:** Data is transmitted schemaless and binary packed. This leads to less traffic and fast
+  serialization times.
 
 ## Repository Structure
 
 This repository contains all parts of the xbot_framework.
 
-### xbot-runtime
+### /xbot-runtime
 
 This is the main binary you will be running on your robot system. It implements service discovery and all IO operations
 to connect to the services.
 Provide your custom interface by writing a plugin using **libxbot-service-interface**.
 
-### libxbot-service
+### /libxbot-service
 
 Use this library to provide a service to the system. An example would be publishing IMU data or providing motor control
 services.
 The library will take care of advertising your service and connecting to the runtime.
 
-### libxbot-service-interface
+### /libxbot-service-interface
 
 Use the **libxbot-service-interface** library to connect to a specific service. For example if there is an IMU service
 on your network, and you want to receive its data (or bridge to ROS), include **libxbot-service-interface** in your
 project.
+
+### /include
+
+Files in this directory are needed on both sides (service and service interface). E.g. message header definitions.
+
+### /codegen
+
+This folder contains the code generation part of the **xbot_framework**. Code generation is done from service.json files
+which describe inputs, outputs and registers of services.
+
+The code generator will generate callbacks for inputs and sending methods for the outputs. It will also generate all
+code necessary for service discovery and configuration.
+
+### /ext
+
+All dependencies are included here as submodules. Not every dependency is needed by every part of the software.
 
 ## Status and Contributions
 

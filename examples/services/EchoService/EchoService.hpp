@@ -20,9 +20,9 @@ class EchoService : public EchoServiceBase {
  protected:
   bool OnInputTextChanged(const char *new_value, uint32_t length) override;
 
-  bool OnSomeIntegerChanged(const uint32_t &new_value) override;
-
-  bool OnAPetChanged(const Pet &new_value) override;
+  bool Configure() override;
+  void OnStart() override;
+  void OnStop() override;
 };
 
 #endif  // ECHOSERVICE_HPP

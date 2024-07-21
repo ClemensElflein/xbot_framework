@@ -4,11 +4,6 @@
       "id": 0,
       "name": "Input Text",
       "type": "char[100]"
-    },
-    {
-      "id": 1,
-      "name": "Some Integer",
-      "type": "uint32_t"
     }
   ],
   "outputs": [

@@ -218,19 +218,23 @@ void xbot::service::Service::runProcessing() {
     uint32_t now_micros = system::getTimeMicros();
     // Calculate when the next tick needs to happen (expected tick rate - time
     // elapsed)
-    auto block_time = static_cast<int32_t>(tick_rate_micros_ -
-                                           (now_micros - last_tick_micros_));
+    int32_t block_time = static_cast<int32_t>(tick_rate_micros_ -
+                                              (now_micros - last_tick_micros_));
     // If this is ture, we have a rollover (since we should need to wait longer
     // than the tick length)
-    if (block_time < 0) {
-      ULOG_ARG_WARNING(&service_id_,
-                       "Service too slow to keep up with tick rate.");
-      block_time = 0;
+    if (is_running_) {
+      if (block_time < 0) {
+        ULOG_ARG_WARNING(&service_id_,
+                         "Service too slow to keep up with tick rate.");
+        block_time = 0;
+      }
+    } else {
+      block_time = tick_rate_micros_;
     }
     // If this is true, we have a rollover (since we should need to wait longer
     // than the tick length)
     if (heartbeat_micros_ > 0) {
-      auto time_to_next_heartbeat = static_cast<int32_t>(
+      int32_t time_to_next_heartbeat = static_cast<int32_t>(
           heartbeat_micros_ - (now_micros - last_heartbeat_micros_));
       if (time_to_next_heartbeat > heartbeat_micros_) {
         ULOG_ARG_WARNING(&service_id_,
@@ -244,7 +248,7 @@ void xbot::service::Service::runProcessing() {
       // interval
       block_time = std::min(
           block_time,
-          static_cast<long>(config::request_configuration_interval_micros));
+          static_cast<int32_t>(config::request_configuration_interval_micros));
     }
     if (queue::queuePopItem(&packet_queue_, reinterpret_cast<void **>(&packet),
                             block_time)) {
