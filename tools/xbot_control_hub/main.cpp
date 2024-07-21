@@ -1,94 +1,51 @@
 
 #include <crow.h>
+#include <dlfcn.h>
 #include <spdlog/spdlog.h>
 
-#include <EchoServiceInterfaceBase.hpp>
+#include <filesystem>
 
 #include "CrowToSpeedlogHandler.hpp"
 #include "PlotJugglerBridge.hpp"
 #include "ServiceDiscoveryImpl.hpp"
 #include "ServiceIoImpl.hpp"
-#include "xbot-service-interface/ServiceInterfaceBase.hpp"
 
 using namespace xbot::serviceif;
+namespace fs = std::filesystem;
 
-std::mutex m;
-std::condition_variable cond_var;
-std::string last_echo{};
-
-int timeout = 0;
-int error = 0;
-int ok = 0;
-
-class EchoServiceInterface : public EchoServiceInterfaceBase {
- public:
-  explicit EchoServiceInterface(uint16_t service_id, Context ctx)
-      : EchoServiceInterfaceBase(service_id, ctx) {}
-
- protected:
- public:
-  bool OnConfigurationRequested(const std::string &uid) override {
-    spdlog::info("Config Requested");
-    std::string prefix = "Some Prefix";
-    StartTransaction(true);
-    SetRegisterPrefix(prefix.c_str(), prefix.length());
-    SetRegisterEchoCount(2);
-    CommitTransaction();
-    return true;
+void loadPlugins(const fs::path &path, Context ctx) {
+  if (!fs::exists(path) || !fs::is_directory(path)) {
+    std::cout << "Directory " << path << " does not exist";
+    return;
   }
 
- protected:
-  void OnEchoChanged(const char *new_value, uint32_t length) override {
-    std::string e = std::string(new_value, length);
-    spdlog::info("Got echo {}", e);
-    if (e.starts_with("this is a test message ")) {
-      std::lock_guard<std::mutex> lock(m);
-      last_echo = e;
-      cond_var.notify_one();
-    }
-  }
-  void OnMessageCountChanged(const uint32_t &new_value) override {
-    // spdlog::info("Got count {}", new_value);
-  }
-};
-
-void echoThread() {
-  const Context ctx{.io = ServiceIOImpl::GetInstance(),
-                    .serviceDiscovery = ServiceDiscoveryImpl::GetInstance()};
-  EchoServiceInterface si{1, ctx};
-  si.Start();
-  int i = 0;
-  while (1) {
-    std::unique_lock<std::mutex> lock(m);
-    std::string str =
-        std::string("this is a test message ") + std::to_string(i++);
-    // spdlog::info("-- sending");
-    auto start = std::chrono::steady_clock::now();
-    si.SendInputText(str.c_str(), str.length());
-    const auto stat = cond_var.wait_for(lock, std::chrono::milliseconds(10));
-
-    if (stat == std::cv_status::no_timeout) {
-      // spdlog::info("-- got echo");
-      // got data
-      if (last_echo == str) {
-        auto end = std::chrono::steady_clock::now();
-        auto duration =
-            std::chrono::duration_cast<std::chrono::microseconds>(end - start)
-                .count();
-        spdlog::info("ping: {} uS", duration);
-        ok++;
+  for (const auto &entry : fs::directory_iterator(path)) {
+    if (entry.is_regular_file() && entry.path().extension() == ".so") {
+      void *handle = dlopen(entry.path().c_str(), RTLD_NOW);
+      if (handle) {
+        const auto pluginName = (const char **)dlsym(handle, "PLUGIN_NAME");
+        {
+          const char *dlsym_error = dlerror();
+          if (dlsym_error) {
+            std::cerr << "Could not load 'entry': " << dlsym_error << '\n';
+            dlclose(handle);
+            continue;
+          }
+        }
+        std::cout << "found plugin " << *pluginName << std::endl;
+        const auto entryFunction =
+            (void (*)(Context))dlsym(handle, "StartPlugin");
+        const char *dlsym_error = dlerror();
+        if (dlsym_error) {
+          std::cerr << "Could not load 'entry': " << dlsym_error << '\n';
+          dlclose(handle);
+        } else {
+          if (entryFunction) entryFunction(ctx);
+          dlclose(handle);
+        }
       } else {
-        error++;
+        std::cerr << "Could not open library: " << dlerror() << '\n';
       }
-    } else {
-      // spdlog::info("-- got TO");
-      timeout++;
-    }
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-    if ((ok + error + timeout) % 100 == 0) {
-      spdlog::info("error: {}", error);
-      spdlog::info("timeout: {}", timeout);
-      spdlog::info("ok: {}", ok);
     }
   }
 }
@@ -108,12 +65,18 @@ int main() {
 
   PlotJugglerBridge pjb{ctx};
 
+  std::string plugin_dirs = std::getenv("XBOT_PLUGIN_DIRS");
+
+  loadPlugins(
+      "/home/clemens/Dev/xbot_framework/xbot_framework/build/Debug/"
+      "example_interface_plugins/"
+      "EchoServicePlugin",
+      ctx);
+
   ioImpl->Start();
   sdImpl->Start();
 
   crow::SimpleApp app;
-
-  std::thread echo{echoThread};
 
   int i = 0;
   CROW_ROUTE(app, "/")

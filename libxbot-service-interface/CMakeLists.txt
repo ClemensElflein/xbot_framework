@@ -20,3 +20,5 @@ target_include_directories(xbot-service-interface PUBLIC
 target_link_libraries(xbot-service-interface PUBLIC
         nlohmann_json::nlohmann_json spdlog::spdlog
 )
+set_property(TARGET xbot-service-interface PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET spdlog PROPERTY POSITION_INDEPENDENT_CODE ON)

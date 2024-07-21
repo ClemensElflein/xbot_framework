@@ -11,29 +11,55 @@ and updates as the project evolves.
 Building robust and reusable robotics systems can be challenging. The Robot Operating System (ROS) provides powerful
 middleware for abstracting communication between high-level components, but struggles at the hardware level, requiring
 specialized firmware to interface with low-level devices. Existing solutions like microROS introduce a direct dependency
-on ROS, complicating debugging.
+on ROS which complicates debugging, bloats the low-level firmware and leads to tight coupling between high-level
+application specific code and low-level drivers.
 
 The **xBot Framework** offers a lightweight, independent solution for interfacing directly with sensors and actuators
-without adding additional dependencies. This new framework integrates hardware components seamlessly into the broader
+without adding heavy dependencies. This new framework helps integrate hardware components seamlessly into the broader
 robotics ecosystem.
 
 ### Features
 
+- **🖥 Service-Based Architecture:** Low level features (e.g. sensors or actuators) are implemented as a service,
+  described by a JSON interface
+  and implemented as C++ classes. This modular design allows for reusable hardware communication. Service
+  implementations can be done either on a microcontroller or a Linux system, since the communication is abstracted from
+  the actual operating system.
 - **⚙️ Hardware Communication Simplified:** Define services in JSON format to generate a C++ code template, allowing for
   easy communication with hardware components such as ESCs, IMUs, and GPIOs.
-- **🧩 Lightweight and Portable:** The framework has no dependencies and avoids dynamic memory allocation, making it
+- **🧩 Lightweight and Portable:** The framework has minimal dependencies and avoids dynamic memory allocation, making it
   ideal for microcontrollers, but can also be used on Linux systems.
-- **🖥 Service-Based Architecture:** Each sensor and actuator is implemented as a service, described by a JSON interface
-  and implemented as C++ service classes. This modular design allows for reusable hardware communication.
-- **🔍 Service Discovery:** The framework includes automatic service discovery, making it easy to detect and manage all
-  connected boards.
-- **🌐 Control Hub:** A versatile hub provides:
-    - **Web UI:** Visually explore devices, monitor data, and test actuators.
+- **🔍 Service Discovery:** The framework includes automatic service discovery, making it easy to connect your low-level
+  services to your application specific high-level code.
+- **⚙️ Runtime:** The Runtime:
+    - **Web UI:** Visually explore devices, monitor data, and test actuators. (Status: Planned)
     - **Firmware Update:** Update the firmware on your board directly through the web interface using our included
-      Ethernet bootloader.
-    - **REST API:** Discover devices programmatically.
-    - **Optional ROS Bridge:** Automatically maps discovered devices to ROS topics, offering configurable integration
-      with ROS-based systems.
+      Ethernet bootloader. (Status: Planned)
+    - **REST API:** Discover services programmatically. (Status: Working)
+    - **Plugin System:** Write an application-specific plugin which gets loaded by the runtime to bridge to your
+      high-level code.
+
+## Repository Structure
+
+This repository contains all parts of the xbot_framework.
+
+### xbot-runtime
+
+This is the main binary you will be running on your robot system. It implements service discovery and all IO operations
+to connect to the services.
+Provide your custom interface by writing a plugin using **libxbot-service-interface**.
+
+### libxbot-service
+
+Use this library to provide a service to the system. An example would be publishing IMU data or providing motor control
+services.
+The library will take care of advertising your service and connecting to the runtime.
+
+### libxbot-service-interface
+
+Use the **libxbot-service-interface** library to connect to a specific service. For example if there is an IMU service
+on your network, and you want to receive its data (or bridge to ROS), include **libxbot-service-interface** in your
+project.
 
 ## Status and Contributions
 

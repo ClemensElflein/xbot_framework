@@ -32,4 +32,5 @@ endif ()
 
 if (XBOT_BUILD_EXAMPLES)
     add_subdirectory(example)
+    add_subdirectory(example_interface_plugins)
 endif ()
