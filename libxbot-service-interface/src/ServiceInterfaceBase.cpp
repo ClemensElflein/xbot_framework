@@ -8,10 +8,14 @@
 using namespace xbot::serviceif;
 
 ServiceInterfaceBase::ServiceInterfaceBase(uint16_t service_id,
-                                           std::string type, uint32_t version)
-    : service_id_(service_id), type_(std::move(type)), version_(version) {}
+                                           std::string type, uint32_t version,
+                                           Context ctx)
+    : service_id_(service_id),
+      type_(std::move(type)),
+      version_(version),
+      ctx(ctx) {}
 void ServiceInterfaceBase::Start() {
-  xbot::serviceif::ServiceDiscovery::RegisterCallbacks(this);
+  ctx.serviceDiscovery->RegisterCallbacks(this);
 }
 bool ServiceInterfaceBase::StartTransaction(bool is_configuration) {
   // Lock like this, we need to keep locked until CommitTransaction()
@@ -61,7 +65,7 @@ bool ServiceInterfaceBase::CommitTransaction() {
   header_ptr->payload_size =
       buffer_.size() - sizeof(xbot::datatypes::XbotHeader);
 
-  return xbot::serviceif::ServiceIO::SendData(uid_, buffer_);
+  return ctx.io->SendData(uid_, buffer_);
 }
 
 bool ServiceInterfaceBase::SendData(uint16_t target_id, const void* data,
@@ -112,22 +116,22 @@ bool ServiceInterfaceBase::SendData(uint16_t target_id, const void* data,
 
   memcpy(buffer_.data() + sizeof(xbot::datatypes::XbotHeader), data, size);
 
-  return xbot::serviceif::ServiceIO::SendData(uid_, buffer_);
+  return ctx.io->SendData(uid_, buffer_);
 }
 bool ServiceInterfaceBase::OnServiceDiscovered(std::string uid) {
   std::unique_lock lk(state_mutex_);
   if (uid_.empty()) {
     // Not bound yet, check, if requirements match. If so, bind do this service.
-    const auto info = xbot::serviceif::ServiceDiscovery::GetServiceInfo(uid);
+    const auto info = ctx.serviceDiscovery->GetServiceInfo(uid);
     if (info->service_id_ == service_id_ && info->description.type == type_ &&
         info->description.version == version_) {
       spdlog::info("Found matching service, registering callbacks");
       // Unregister service discovery callbacks, we're not interested anymore
-      xbot::serviceif::ServiceDiscovery::UnregisterCallbacks(this);
+      ctx.serviceDiscovery->UnregisterCallbacks(this);
       // store the uid, so that we actually process the service messages
       uid_ = uid;
       // Register for data
-      xbot::serviceif::ServiceIO::RegisterCallbacks(uid, this);
+      ctx.io->RegisterCallbacks(uid, this);
       return true;
     }
   }

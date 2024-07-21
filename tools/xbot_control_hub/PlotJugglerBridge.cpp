@@ -86,25 +86,19 @@ const std::map<std::string, size_t> type_size_map{
     {"double", sizeof(float)},
 };
 
-PlotJugglerBridge::PlotJugglerBridge() {
-  socket_.Start();
-  ServiceDiscovery::RegisterCallbacks(this);
-}
-PlotJugglerBridge::~PlotJugglerBridge() {
-  ServiceIO::UnregisterCallbacks(this);
-}
+PlotJugglerBridge::~PlotJugglerBridge() { ctx.io->UnregisterCallbacks(this); }
 bool PlotJugglerBridge::OnServiceDiscovered(std::string uid) {
   // Query the service description and add build the map
   std::unique_lock lk{state_mutex_};
 
-  const auto info = ServiceDiscovery::GetServiceInfo(uid);
+  const auto info = ctx.serviceDiscovery->GetServiceInfo(uid);
   for (const auto& output : info->description.outputs) {
     topic_map_[std::make_pair(uid, output.id)] = output;
   }
 
   // We are interested in all discovered services, so we register us with the
   // ServiceIO as soon as a new service is discovered
-  ServiceIO::RegisterCallbacks(uid, this);
+  ctx.io->RegisterCallbacks(uid, this);
   return true;
 }
 bool PlotJugglerBridge::OnEndpointChanged(std::string uid, uint32_t old_ip,
@@ -185,4 +179,8 @@ void PlotJugglerBridge::OnServiceDisconnected(const std::string& uid) {
 bool PlotJugglerBridge::OnConfigurationRequested(const std::string& uid) {
   spdlog::info("PJB: OnConfigurationRequested");
   return false;
+}
+PlotJugglerBridge::PlotJugglerBridge(xbot::serviceif::Context ctx) : ctx(ctx) {
+  socket_.Start();
+  ctx.serviceDiscovery->RegisterCallbacks(this);
 }

@@ -9,5 +9,8 @@ add_service_interface(EchoServiceInterface ${CMAKE_CURRENT_SOURCE_DIR}/../../exa
 
 add_executable(xbot_hub
         main.cpp
-        PlotJugglerBridge.cpp)
+        ServiceDiscoveryImpl.cpp
+        ServiceIO.cpp
+        PlotJugglerBridge.cpp
+        ServiceIoImpl.hpp)
 target_link_libraries(xbot_hub PRIVATE cli::cli cli::cli Crow xbot-service-interface EchoServiceInterface)

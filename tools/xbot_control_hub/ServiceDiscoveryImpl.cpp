@@ -2,9 +2,10 @@
 // Created by clemens on 4/29/24.
 //
 
+#include "ServiceDiscoveryImpl.hpp"
+
 #include <mutex>
 #include <nlohmann/json.hpp>
-#include <xbot-service-interface/ServiceDiscovery.hpp>
 #include <xbot-service-interface/Socket.hpp>
 #include <xbot-service-interface/data/ServiceInfo.hpp>
 #include <xbot/config.hpp>
@@ -23,8 +24,10 @@ std::thread sd_thread_{};
 Socket sd_socket_{"0.0.0.0", config::multicast_port};
 std::vector<ServiceDiscoveryCallbacks *> registered_callbacks_{};
 
-bool ServiceDiscovery::GetEndpoint(const std::string &uid, uint32_t &ip,
-                                   uint16_t &port) {
+ServiceDiscoveryImpl *instance_ = nullptr;
+
+bool ServiceDiscoveryImpl::GetEndpoint(const std::string &uid, uint32_t &ip,
+                                       uint16_t &port) {
   std::unique_lock lk(sd_mutex_);
   if (discovered_services_.contains(uid)) {
     auto &service_info = discovered_services_.at(uid);
@@ -37,7 +40,7 @@ bool ServiceDiscovery::GetEndpoint(const std::string &uid, uint32_t &ip,
   return false;
 }
 
-bool ServiceDiscovery::Start() {
+bool ServiceDiscoveryImpl::Start() {
   if (!sd_socket_.Start()) return false;
 
   if (!sd_socket_.JoinMulticast(config::sd_multicast_address)) return false;
@@ -48,7 +51,8 @@ bool ServiceDiscovery::Start() {
   return true;
 }
 
-void ServiceDiscovery::RegisterCallbacks(ServiceDiscoveryCallbacks *callbacks) {
+void ServiceDiscoveryImpl::RegisterCallbacks(
+    ServiceDiscoveryCallbacks *callbacks) {
   if (callbacks == nullptr) {
     return;
   }
@@ -59,7 +63,7 @@ void ServiceDiscovery::RegisterCallbacks(ServiceDiscoveryCallbacks *callbacks) {
     registered_callbacks_.push_back(callbacks);
   }
 }
-void ServiceDiscovery::UnregisterCallbacks(
+void ServiceDiscoveryImpl::UnregisterCallbacks(
     ServiceDiscoveryCallbacks *callbacks) {
   if (callbacks == nullptr) {
     return;
@@ -77,7 +81,7 @@ void ServiceDiscovery::UnregisterCallbacks(
   }
 }
 
-std::unique_ptr<ServiceInfo> ServiceDiscovery::GetServiceInfo(
+std::unique_ptr<ServiceInfo> ServiceDiscoveryImpl::GetServiceInfo(
     const std::string &uid) {
   std::unique_lock lk(sd_mutex_);
   if (!discovered_services_.contains(uid)) {
@@ -87,14 +91,21 @@ std::unique_ptr<ServiceInfo> ServiceDiscovery::GetServiceInfo(
   return std::make_unique<ServiceInfo>(discovered_services_.at(uid));
 }
 std::unique_ptr<std::map<std::string, ServiceInfo>>
-ServiceDiscovery::GetAllSerivces() {
+ServiceDiscoveryImpl::GetAllServices() {
   std::unique_lock lk(sd_mutex_);
   return std::make_unique<std::map<std::string, ServiceInfo>>(
       discovered_services_);
 }
-bool ServiceDiscovery::DropService(const std::string &uid) {
+bool ServiceDiscoveryImpl::DropService(const std::string &uid) {
   std::unique_lock lk(sd_mutex_);
   return discovered_services_.erase(uid) > 0;
+}
+ServiceDiscoveryImpl *ServiceDiscoveryImpl::GetInstance() {
+  std::unique_lock lk{sd_mutex_};
+  if (instance_ == nullptr) {
+    instance_ = new ServiceDiscoveryImpl();
+  }
+  return instance_;
 }
 
 void Run() {

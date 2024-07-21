@@ -5,16 +5,19 @@
 #ifndef SERVICEINTERFACEBASE_HPP
 #define SERVICEINTERFACEBASE_HPP
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <vector>
 
+#include "Plugin.hpp"
 #include "ServiceIO.hpp"
 
 namespace xbot::serviceif {
 class ServiceInterfaceBase : public xbot::serviceif::ServiceIOCallbacks,
                              public xbot::serviceif::ServiceDiscoveryCallbacks {
  public:
-  ServiceInterfaceBase(uint16_t service_id, std::string type, uint32_t version);
+  ServiceInterfaceBase(uint16_t service_id, std::string type, uint32_t version,
+                       Context ctx);
 
   void Start();
 
@@ -51,6 +54,8 @@ class ServiceInterfaceBase : public xbot::serviceif::ServiceIOCallbacks,
   bool is_configuration_transaction_{false};
 
   std::recursive_mutex state_mutex_{};
+
+  Context ctx{};
 };
 }  // namespace xbot::serviceif
 

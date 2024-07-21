@@ -20,6 +20,7 @@ cog.outl(f"#define {service['interface_class_name'].upper()}_HPP")
 //[[[end]]]
 
 #include <xbot-service-interface/ServiceInterfaceBase.hpp>
+#include <xbot-service-interface/Plugin.hpp>
 
 /*[[[cog
 for include in service['additional_includes']:
@@ -34,9 +35,9 @@ class ServiceTemplateInterfaceBase : public xbot::serviceif::ServiceInterfaceBas
 //[[[end]]]
 public:
     /*[[[cog
-    cog.outl(f"explicit {service['interface_class_name']}(uint16_t service_id) : ServiceInterfaceBase(service_id, \"{service['type']}\", {service['version']}) {{}}")
+    cog.outl(f"explicit {service['interface_class_name']}(uint16_t service_id, xbot::serviceif::Context ctx) : ServiceInterfaceBase(service_id, \"{service['type']}\", {service['version']}, ctx) {{}}")
     ]]]*/
-    explicit ServiceTemplateInterfaceBase(uint16_t service_id) : ServiceInterfaceBase(service_id, "ServiceTemplate", 1) {}
+    explicit ServiceTemplateInterfaceBase(uint16_t service_id, Context ctx) : ServiceInterfaceBase(service_id, "ServiceTemplate", 1, ctx) {}
     //[[[end]]]
 
 

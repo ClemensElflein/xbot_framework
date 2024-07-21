@@ -6,6 +6,8 @@
 
 #include "CrowToSpeedlogHandler.hpp"
 #include "PlotJugglerBridge.hpp"
+#include "ServiceDiscoveryImpl.hpp"
+#include "ServiceIoImpl.hpp"
 #include "xbot-service-interface/ServiceInterfaceBase.hpp"
 
 using namespace xbot::serviceif;
@@ -20,8 +22,8 @@ int ok = 0;
 
 class EchoServiceInterface : public EchoServiceInterfaceBase {
  public:
-  explicit EchoServiceInterface(uint16_t service_id)
-      : EchoServiceInterfaceBase(service_id) {}
+  explicit EchoServiceInterface(uint16_t service_id, Context ctx)
+      : EchoServiceInterfaceBase(service_id, ctx) {}
 
  protected:
  public:
@@ -51,7 +53,9 @@ class EchoServiceInterface : public EchoServiceInterfaceBase {
 };
 
 void echoThread() {
-  EchoServiceInterface si{1};
+  const Context ctx{.io = ServiceIOImpl::GetInstance(),
+                    .serviceDiscovery = ServiceDiscoveryImpl::GetInstance()};
+  EchoServiceInterface si{1, ctx};
   si.Start();
   int i = 0;
   while (1) {
@@ -93,14 +97,19 @@ int main() {
   hub::CrowToSpeedlogHandler logger;
   crow::logger::setHandler(&logger);
 
+  const auto ioImpl = ServiceIOImpl::GetInstance();
+  const auto sdImpl = ServiceDiscoveryImpl::GetInstance();
+
+  const Context ctx{.io = ioImpl, .serviceDiscovery = sdImpl};
+
   // Register the ServiceIO before starting service discovery
   // this way, whenever a service is found, ServiceIO claims it automatically
-  ServiceDiscovery::RegisterCallbacks(ServiceIO::GetInstance());
+  ctx.serviceDiscovery->RegisterCallbacks(ioImpl);
 
-  PlotJugglerBridge pjb;
+  PlotJugglerBridge pjb{ctx};
 
-  ServiceIO::Start();
-  ServiceDiscovery::Start();
+  ioImpl->Start();
+  sdImpl->Start();
 
   crow::SimpleApp app;
 
@@ -110,9 +119,9 @@ int main() {
   CROW_ROUTE(app, "/")
   ([]() { return "Hello world"; });
   CROW_ROUTE(app, "/services")
-  ([]() {
+  ([sdImpl]() {
     nlohmann::json result = nlohmann::detail::value_t::object;
-    const auto services = ServiceDiscovery::GetAllSerivces();
+    const auto services = sdImpl->GetAllServices();
 
     for (const auto &s : *services) {
       result[s.first] = s.second;

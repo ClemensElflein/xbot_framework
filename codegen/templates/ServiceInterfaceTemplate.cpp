@@ -75,10 +75,10 @@ for register in service["registers"]:
         cog.outl("}")
 ]]]*/
 bool ServiceTemplateInterfaceBase::SetRegisterRegister1(const char* data, uint32_t length) {
-    return SendData(0, data, length*sizeof(char));
+    return SendData(0, data, length*sizeof(char), true);
 }
 bool ServiceTemplateInterfaceBase::SetRegisterRegister2(const uint32_t &data) {
-    return SendData(1, &data, sizeof(uint32_t));
+    return SendData(1, &data, sizeof(uint32_t), true);
 }
 //[[[end]]]
 
@@ -95,10 +95,10 @@ for input in service["inputs"]:
         cog.outl("}")
 ]]]*/
 bool ServiceTemplateInterfaceBase::SendExampleInput1(const char* data, uint32_t length) {
-    return SendData(0, data, length*sizeof(char));
+    return SendData(0, data, length*sizeof(char), false);
 }
 bool ServiceTemplateInterfaceBase::SendExampleInput2(const uint32_t &data) {
-    return SendData(1, &data, sizeof(uint32_t));
+    return SendData(1, &data, sizeof(uint32_t), false);
 }
 //[[[end]]]
 

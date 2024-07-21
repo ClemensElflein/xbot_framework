@@ -8,10 +8,11 @@
 #include <mutex>
 #include <nlohmann/json.hpp>
 #include <thread>
-#include <xbot-service-interface/ServiceIO.hpp>
 #include <xbot-service-interface/Socket.hpp>
 #include <xbot/datatypes/ClaimPayload.hpp>
 
+#include "ServiceDiscoveryImpl.hpp"
+#include "ServiceIoImpl.hpp"
 #include "xbot-service-interface/endpoint_utils.hpp"
 
 using namespace xbot::serviceif;
@@ -25,7 +26,7 @@ std::map<std::string, uint64_t> inverse_endpoint_map_{};
 
 // Protects inverse_endpoint_map_, endpoint_map_ and instance_
 std::recursive_mutex state_mutex_{};
-ServiceIO *instance_ = nullptr;
+ServiceIOImpl *instance_ = nullptr;
 
 std::thread io_thread_{};
 Socket io_socket_{"0.0.0.0"};
@@ -39,13 +40,13 @@ std::chrono::time_point<std::chrono::steady_clock> last_check_{
 std::map<std::string, std::vector<ServiceIOCallbacks *>>
     registered_callbacks_{};
 
-bool ServiceIO::OnServiceDiscovered(std::string uid) {
+bool ServiceIOImpl::OnServiceDiscovered(std::string uid) {
   std::unique_lock lk{state_mutex_};
 
   uint32_t service_ip = 0;
   uint16_t service_port = 0;
 
-  if (ServiceDiscovery::GetEndpoint(uid, service_ip, service_port) &&
+  if (service_discovery->GetEndpoint(uid, service_ip, service_port) &&
       service_ip != 0 && service_port != 0) {
     // Got valid enpdoint, create a state
     uint64_t key = BuildKey(service_ip, service_port);
@@ -64,9 +65,9 @@ bool ServiceIO::OnServiceDiscovered(std::string uid) {
   return true;
 }
 
-bool ServiceIO::OnEndpointChanged(std::string uid, uint32_t old_ip,
-                                  uint16_t old_port, uint32_t new_ip,
-                                  uint16_t new_port) {
+bool ServiceIOImpl::OnEndpointChanged(std::string uid, uint32_t old_ip,
+                                      uint16_t old_port, uint32_t new_ip,
+                                      uint16_t new_port) {
   if (old_ip == 0 || old_port == 0) {
     // Invalid endpoint, we never stored this reference
     return true;
@@ -100,22 +101,22 @@ bool ServiceIO::OnEndpointChanged(std::string uid, uint32_t old_ip,
   return true;
 }
 
-ServiceIO *ServiceIO::GetInstance() {
+ServiceIOImpl *ServiceIOImpl::GetInstance() {
   std::unique_lock lk{state_mutex_};
   if (instance_ == nullptr) {
-    instance_ = new ServiceIO();
+    instance_ = new ServiceIOImpl(ServiceDiscoveryImpl::GetInstance());
   }
   return instance_;
 }
 
-bool ServiceIO::Start() {
+bool ServiceIOImpl::Start() {
   stopped_.clear();
-  io_thread_ = std::thread{&ServiceIO::RunIo};
+  io_thread_ = std::thread{&ServiceIOImpl::RunIo, this};
 
   return true;
 }
-void ServiceIO::RegisterCallbacks(const std::string &uid,
-                                  ServiceIOCallbacks *callbacks) {
+void ServiceIOImpl::RegisterCallbacks(const std::string &uid,
+                                      ServiceIOCallbacks *callbacks) {
   std::unique_lock lk{state_mutex_};
   auto &vector = registered_callbacks_[uid];
 
@@ -127,7 +128,7 @@ void ServiceIO::RegisterCallbacks(const std::string &uid,
   // add the callbacks
   vector.push_back(callbacks);
 }
-void ServiceIO::UnregisterCallbacks(ServiceIOCallbacks *callbacks) {
+void ServiceIOImpl::UnregisterCallbacks(ServiceIOCallbacks *callbacks) {
   std::unique_lock lk{state_mutex_};
   for (auto [service_id, callback_list] : registered_callbacks_) {
     for (auto cb_it = callback_list.begin(); cb_it != callback_list.end();) {
@@ -142,8 +143,8 @@ void ServiceIO::UnregisterCallbacks(ServiceIOCallbacks *callbacks) {
   }
 }
 
-bool ServiceIO::SendData(const std::string &uid,
-                         const std::vector<uint8_t> &data) {
+bool ServiceIOImpl::SendData(const std::string &uid,
+                             const std::vector<uint8_t> &data) {
   uint64_t endpoint;
   {
     std::unique_lock lk{state_mutex_};
@@ -157,7 +158,7 @@ bool ServiceIO::SendData(const std::string &uid,
   return TransmitPacket(endpoint, data);
 }
 
-void ServiceIO::RunIo() {
+void ServiceIOImpl::RunIo() {
   // Set timeout so that we can detect missing heartbeat
   io_socket_.SetReceiveTimeoutMicros(config::default_heartbeat_micros);
   io_socket_.Start();
@@ -189,7 +190,7 @@ void ServiceIO::RunIo() {
 
             // Drop service from discovery, so that it will get
             // rediscovered later
-            ServiceDiscovery::DropService(uid);
+            service_discovery->DropService(uid);
 
             // Notify callbacks for that service
             if (const auto cb_it = registered_callbacks_.find(uid);
@@ -258,7 +259,7 @@ void ServiceIO::RunIo() {
   }
 }
 
-void ServiceIO::ClaimService(uint64_t key) {
+void ServiceIOImpl::ClaimService(uint64_t key) {
   std::unique_lock lk{state_mutex_};
   if (!endpoint_map_.contains(key)) {
     // Cannot try to claim a service which was not even discovered
@@ -311,7 +312,8 @@ void ServiceIO::ClaimService(uint64_t key) {
   TransmitPacket(key, packet);
 }
 
-bool ServiceIO::TransmitPacket(uint64_t key, const std::vector<uint8_t> &data) {
+bool ServiceIOImpl::TransmitPacket(uint64_t key,
+                                   const std::vector<uint8_t> &data) {
   uint32_t service_ip = key >> 32;
   uint32_t service_port = key & 0xFFFF;
 
@@ -320,9 +322,10 @@ bool ServiceIO::TransmitPacket(uint64_t key, const std::vector<uint8_t> &data) {
   }
   return io_socket_.TransmitPacket(service_ip, service_port, data);
 }
-void ServiceIO::HandleClaimMessage(uint64_t key,
-                                   xbot::datatypes::XbotHeader *header,
-                                   const uint8_t *payload, size_t payload_len) {
+void ServiceIOImpl::HandleClaimMessage(uint64_t key,
+                                       xbot::datatypes::XbotHeader *header,
+                                       const uint8_t *payload,
+                                       size_t payload_len) {
   if (header->arg1 != 1) {
     // Not actually an ack
     spdlog::warn("received claim ack without arg1==1");
@@ -353,9 +356,10 @@ void ServiceIO::HandleClaimMessage(uint64_t key,
     }
   }
 }
-void ServiceIO::HandleDataMessage(uint64_t key,
-                                  xbot::datatypes::XbotHeader *header,
-                                  const uint8_t *payload, size_t payload_len) {
+void ServiceIOImpl::HandleDataMessage(uint64_t key,
+                                      xbot::datatypes::XbotHeader *header,
+                                      const uint8_t *payload,
+                                      size_t payload_len) {
   {
     std::unique_lock lk{state_mutex_};
     if (!endpoint_map_.contains(key)) {
@@ -378,10 +382,10 @@ void ServiceIO::HandleDataMessage(uint64_t key,
     }
   }
 }
-void ServiceIO::HandleDataTransaction(uint64_t key,
-                                      xbot::datatypes::XbotHeader *header,
-                                      const uint8_t *payload,
-                                      size_t payload_len) {
+void ServiceIOImpl::HandleDataTransaction(uint64_t key,
+                                          xbot::datatypes::XbotHeader *header,
+                                          const uint8_t *payload,
+                                          size_t payload_len) {
   {
     std::unique_lock lk{state_mutex_};
     if (!endpoint_map_.contains(key)) {
@@ -437,10 +441,10 @@ void ServiceIO::HandleDataTransaction(uint64_t key,
     }
   }
 }
-void ServiceIO::HandleHeartbeatMessage(uint64_t key,
-                                       xbot::datatypes::XbotHeader *header,
-                                       const uint8_t *payload,
-                                       size_t payload_len) {
+void ServiceIOImpl::HandleHeartbeatMessage(uint64_t key,
+                                           xbot::datatypes::XbotHeader *header,
+                                           const uint8_t *payload,
+                                           size_t payload_len) {
   std::unique_lock lk{state_mutex_};
   if (!endpoint_map_.contains(key)) {
     spdlog::warn("received heartbeat from wrong service");
@@ -449,10 +453,9 @@ void ServiceIO::HandleHeartbeatMessage(uint64_t key,
   endpoint_map_.at(key)->last_heartbeat_received_ =
       std::chrono::steady_clock::now();
 }
-void ServiceIO::HandleConfigurationRequest(uint64_t key,
-                                           xbot::datatypes::XbotHeader *header,
-                                           const uint8_t *payload,
-                                           size_t payload_len) {
+void ServiceIOImpl::HandleConfigurationRequest(
+    uint64_t key, xbot::datatypes::XbotHeader *header, const uint8_t *payload,
+    size_t payload_len) {
   std::unique_lock lk{state_mutex_};
   if (!endpoint_map_.contains(key)) {
     spdlog::debug("got config request from wrong service");
@@ -484,3 +487,5 @@ void ServiceIO::HandleConfigurationRequest(uint64_t key,
         ptr->uid);
   }
 }
+ServiceIOImpl::ServiceIOImpl(ServiceDiscoveryImpl *serviceDiscovery)
+    : service_discovery(serviceDiscovery) {}
