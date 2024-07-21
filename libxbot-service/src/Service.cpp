@@ -131,9 +131,15 @@ bool xbot::service::Service::StartTransaction(uint64_t timestamp) {
   return true;
 }
 bool xbot::service::Service::CommitTransaction() {
+  mutex::lockMutex(&state_mutex_);
+  if (transaction_started_) {
+    // unlock the StartTransaction() lock
+    mutex::unlockMutex(&state_mutex_);
+  }
   transaction_started_ = false;
   if (target_ip == 0 || target_port == 0) {
     ULOG_ARG_INFO(&service_id_, "Service has no target, dropping packet");
+    mutex::unlockMutex(&state_mutex_);
     return false;
   }
   header_.message_type = datatypes::MessageType::TRANSACTION;
@@ -143,6 +149,7 @@ bool xbot::service::Service::CommitTransaction() {
   packet::PacketPtr ptr = packet::allocatePacket();
   packet::packetAppendData(ptr, &header_, sizeof(header_));
   packet::packetAppendData(ptr, scratch_buffer, scratch_buffer_fill_);
+  // done with the scratch buffer, release it
   mutex::unlockMutex(&state_mutex_);
   return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
 }
@@ -246,7 +253,7 @@ void xbot::service::Service::runProcessing() {
       if (packet::packetGetData(packet, &buffer, &used_data)) {
         const auto header = reinterpret_cast<datatypes::XbotHeader *>(buffer);
         const uint8_t *const payload_buffer =
-            reinterpret_cast<uint8_t *>(buffer) + header->payload_size;
+            reinterpret_cast<uint8_t *>(buffer) + sizeof(datatypes::XbotHeader);
 
         switch (header->message_type) {
           case datatypes::MessageType::CLAIM:
@@ -255,7 +262,7 @@ void xbot::service::Service::runProcessing() {
             break;
           case datatypes::MessageType::DATA:
             if (is_running_) {
-              HandleDataMessage(header, packet, header->payload_size);
+              HandleDataMessage(header, payload_buffer, header->payload_size);
             }
             break;
           case datatypes::MessageType::TRANSACTION:
