@@ -308,7 +308,7 @@ void xbot::service::Service::runProcessing() {
       ULOG_ARG_DEBUG(&service_id_, "Sending heartbeat");
       heartbeat();
     }
-    if (!is_running_ && !isConfigured() &&
+    if (!is_running_ && !isConfigured() && target_ip > 0 && target_port > 0 &&
         static_cast<int32_t>(now - last_configuration_request_micros_) >=
             config::request_configuration_interval_micros) {
       ULOG_ARG_DEBUG(&service_id_, "Requesting Configuration");

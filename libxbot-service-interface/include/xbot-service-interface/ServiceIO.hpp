@@ -86,6 +86,12 @@ class ServiceIO {
    */
   virtual bool SendData(const std::string &uid,
                         const std::vector<uint8_t> &data) = 0;
+
+  /**
+   * Call this to check if IO is still running.
+   * On shutdown this will return false, stop your interface then
+   */
+  virtual bool OK() = 0;
 };
 }  // namespace xbot::serviceif
 

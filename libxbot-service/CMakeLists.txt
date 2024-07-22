@@ -29,6 +29,7 @@ target_sources(xbot-service PRIVATE ${PORT_SOURCES})
 
 target_include_directories(xbot-service PUBLIC include ../include)
 target_link_libraries(xbot-service PUBLIC ulog etl)
+install(TARGETS xbot-service)
 #set_property(TARGET xbot-service PROPERTY CXX_STANDARD 23)
 
 #add_subdirectory(test)

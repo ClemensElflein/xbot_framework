@@ -1,6 +1,10 @@
 {
   "buildPresets": [
     {
+      "configurePreset": "Release",
+      "name": "CI"
+    },
+    {
       "configurePreset": "Debug",
       "name": "Debug"
     },
@@ -48,6 +52,13 @@
       },
       "inherits": "default",
       "name": "Release"
+    },
+    {
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "inherits": "default",
+      "name": "CI"
     },
     {
       "cacheVariables": {

@@ -108,6 +108,14 @@ ServiceDiscoveryImpl *ServiceDiscoveryImpl::GetInstance() {
   return instance_;
 }
 
+bool ServiceDiscoveryImpl::Stop() {
+  spdlog::info("Shutting down ServiceDiscovery");
+  stopped_.test_and_set();
+  sd_thread_.join();
+  spdlog::info("ServiceDiscovery Stopped.");
+  return true;
+}
+
 void Run() {
   std::vector<uint8_t> packet{};
   uint32_t sender_ip;

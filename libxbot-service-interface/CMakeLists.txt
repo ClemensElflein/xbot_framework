@@ -10,7 +10,12 @@ add_library(xbot-service-interface
         src/ServiceInfo.cpp
         include/xbot-service-interface/ServiceInterfaceBase.hpp
         src/ServiceInterfaceBase.cpp
-        include/xbot-service-interface/Plugin.hpp
+        include/xbot-service-interface/XbotServiceInterface.hpp
+        src/ServiceDiscoveryImpl.cpp
+        src/ServiceIO.cpp
+        src/PlotJugglerBridge.cpp
+        src/ServiceIOImpl.hpp
+        src/XbotServiceInterface.cpp
 )
 
 target_include_directories(xbot-service-interface PUBLIC
@@ -18,7 +23,7 @@ target_include_directories(xbot-service-interface PUBLIC
         ../include
 )
 target_link_libraries(xbot-service-interface PUBLIC
-        nlohmann_json::nlohmann_json spdlog::spdlog
+        nlohmann_json::nlohmann_json spdlog::spdlog Crow::Crow
 )
-set_property(TARGET xbot-service-interface PROPERTY POSITION_INDEPENDENT_CODE ON)
-set_property(TARGET spdlog PROPERTY POSITION_INDEPENDENT_CODE ON)
+
+install(TARGETS xbot-service-interface)

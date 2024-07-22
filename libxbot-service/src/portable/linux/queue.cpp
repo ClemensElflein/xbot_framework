@@ -3,6 +3,7 @@
 //
 #include <cassert>
 #include <condition_variable>
+#include <cstdlib>
 #include <mutex>
 #include <queue>
 #include <xbot-service/portable/queue.hpp>

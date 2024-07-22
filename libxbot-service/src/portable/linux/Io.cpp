@@ -1,6 +1,9 @@
 //
 // Created by clemens on 7/14/24.
 //
+#include <sys/select.h>
+
+#include <algorithm>
 #include <xbot-service/Io.hpp>
 #include <xbot-service/Lock.hpp>
 #include <xbot-service/portable/thread.hpp>

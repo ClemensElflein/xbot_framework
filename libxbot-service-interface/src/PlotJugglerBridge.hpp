@@ -5,10 +5,10 @@
 #ifndef PLOTJUGGLERBRIDGE_HPP
 #define PLOTJUGGLERBRIDGE_HPP
 
-#include <xbot-service-interface/Plugin.hpp>
 #include <xbot-service-interface/ServiceDiscovery.hpp>
 #include <xbot-service-interface/ServiceIO.hpp>
 #include <xbot-service-interface/Socket.hpp>
+#include <xbot-service-interface/XbotServiceInterface.hpp>
 
 using namespace xbot;
 
@@ -32,6 +32,7 @@ class PlotJugglerBridge : public serviceif::ServiceDiscoveryCallbacks,
  public:
   explicit PlotJugglerBridge(xbot::serviceif::Context ctx);
   ~PlotJugglerBridge() override;
+  bool Start();
   bool OnServiceDiscovered(std::string uid) override;
   bool OnEndpointChanged(std::string uid, uint32_t old_ip, uint16_t old_port,
                          uint32_t new_ip, uint16_t new_port) override;

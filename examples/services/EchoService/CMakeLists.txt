@@ -12,3 +12,4 @@ target_link_libraries(EchoServiceBin EchoService)
 
 # Allow logging using ulog
 target_compile_definitions(ulog PUBLIC ULOG_ENABLED)
+install(TARGETS EchoServiceBin DESTINATION services)

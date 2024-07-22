@@ -42,6 +42,8 @@ class ServiceIOImpl : public ServiceIO, public ServiceDiscoveryCallbacks {
 
   bool Start();
 
+  bool Stop();
+
   // Deleted copy constructor
   ServiceIOImpl(ServiceIOImpl &other) = delete;
 
@@ -70,6 +72,8 @@ class ServiceIOImpl : public ServiceIO, public ServiceDiscoveryCallbacks {
 
   explicit ServiceIOImpl(ServiceDiscoveryImpl *serviceDiscovery);
   ~ServiceIOImpl() override = default;
+
+  bool OK() final;
 
  private:
   static inline uint64_t BuildKey(uint32_t ip, uint16_t port) {

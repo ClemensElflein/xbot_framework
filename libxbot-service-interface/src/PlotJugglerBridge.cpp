@@ -179,7 +179,9 @@ void PlotJugglerBridge::OnServiceDisconnected(const std::string& uid) {
 bool PlotJugglerBridge::OnConfigurationRequested(const std::string& uid) {
   return false;
 }
-PlotJugglerBridge::PlotJugglerBridge(xbot::serviceif::Context ctx) : ctx(ctx) {
-  socket_.Start();
+PlotJugglerBridge::PlotJugglerBridge(xbot::serviceif::Context ctx) : ctx(ctx) {}
+bool PlotJugglerBridge::Start() {
+  if (!socket_.Start()) return false;
   ctx.serviceDiscovery->RegisterCallbacks(this);
+  return true;
 }

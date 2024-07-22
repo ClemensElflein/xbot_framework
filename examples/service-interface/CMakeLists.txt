@@ -1,1 +1,1 @@
-add_subdirectory(EchoServicePlugin)
+add_subdirectory(EchoServiceExample)

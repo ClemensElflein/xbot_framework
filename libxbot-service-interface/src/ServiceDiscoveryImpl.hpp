@@ -31,6 +31,7 @@ class ServiceDiscoveryImpl : public ServiceDiscovery {
   bool GetEndpoint(const std::string &uid, uint32_t &ip, uint16_t &port);
 
   bool Start();
+  bool Stop();
 
   void RegisterCallbacks(ServiceDiscoveryCallbacks *callbacks) override;
   void UnregisterCallbacks(ServiceDiscoveryCallbacks *callbacks) override;

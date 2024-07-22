@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "Plugin.hpp"
 #include "ServiceIO.hpp"
+#include "XbotServiceInterface.hpp"
 
 namespace xbot::serviceif {
 class ServiceInterfaceBase : public xbot::serviceif::ServiceIOCallbacks,

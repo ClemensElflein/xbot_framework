@@ -12,7 +12,7 @@
 #include <xbot/datatypes/ClaimPayload.hpp>
 
 #include "ServiceDiscoveryImpl.hpp"
-#include "ServiceIoImpl.hpp"
+#include "ServiceIOImpl.hpp"
 #include "xbot-service-interface/endpoint_utils.hpp"
 
 using namespace xbot::serviceif;
@@ -34,7 +34,6 @@ std::atomic_flag stopped_{false};
 // track when we last checked for claims and timeouts
 std::chrono::time_point<std::chrono::steady_clock> last_check_{
     std::chrono::seconds(0)};
-;
 
 // keep a list of callbacks for each service
 std::map<std::string, std::vector<ServiceIOCallbacks *>>
@@ -489,3 +488,11 @@ void ServiceIOImpl::HandleConfigurationRequest(
 }
 ServiceIOImpl::ServiceIOImpl(ServiceDiscoveryImpl *serviceDiscovery)
     : service_discovery(serviceDiscovery) {}
+bool ServiceIOImpl::OK() { return !stopped_.test(); }
+bool ServiceIOImpl::Stop() {
+  spdlog::info("Shutting down ServiceIO");
+  stopped_.test_and_set();
+  io_thread_.join();
+  spdlog::info("ServiceIO Stopped.");
+  return true;
+}
