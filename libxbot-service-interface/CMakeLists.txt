@@ -25,5 +25,8 @@ target_include_directories(xbot-service-interface PUBLIC
 target_link_libraries(xbot-service-interface PUBLIC
         nlohmann_json::nlohmann_json spdlog::spdlog Crow::Crow
 )
-
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
+        DESTINATION include
+        FILES_MATCHING PATTERN "*.h*"
+)
 install(TARGETS xbot-service-interface)
