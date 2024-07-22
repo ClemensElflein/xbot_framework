@@ -9,12 +9,6 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
     cmake_policy(SET CMP0135 NEW)
 endif ()
 
-
-if (XBOT_BUILD_RUNTIME)
-    message("Building Runtime")
-    set(XBOT_BUILD_LIB_SERVICE_INTERFACE ON)
-endif ()
-
 if (XBOT_BUILD_EXAMPLES)
     message("Building Examples")
     set(XBOT_BUILD_LIB_SERVICE ON)

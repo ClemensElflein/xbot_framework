@@ -4,6 +4,3 @@
 [submodule "xbot_comms/ext/ulog"]
 	path = ext/ulog
 	url = https://github.com/ClemensElflein/ulog.git
-[submodule "xbot_comms/ext/zcbor"]
-	path = ext/zcbor
-	url = https://github.com/NordicSemiconductor/zcbor.git

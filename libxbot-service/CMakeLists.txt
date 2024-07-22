@@ -28,7 +28,7 @@ target_sources(xbot-service PRIVATE ${PORT_SOURCES})
 
 
 target_include_directories(xbot-service PUBLIC include ../include)
-target_link_libraries(xbot-service PUBLIC ulog etl)
+target_link_libraries(xbot-service PUBLIC ulog)
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
         DESTINATION include

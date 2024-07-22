@@ -26,7 +26,8 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "XBOT_BUILD_EXAMPLES": "ON",
-        "XBOT_BUILD_RUNTIME": "ON"
+        "XBOT_BUILD_LIB_SERVICE": "ON",
+        "XBOT_BUILD_LIB_SERVICE_INTERFACE": "ON"
       },
       "generator": "Unix Makefiles",
       "hidden": true,
