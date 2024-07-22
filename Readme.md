@@ -45,12 +45,6 @@ robotics ecosystem.
 
 This repository contains all parts of the xbot_framework.
 
-### /xbot-runtime
-
-This is the main binary you will be running on your robot system. It implements service discovery and all IO operations
-to connect to the services.
-Provide your custom interface by writing a plugin using **libxbot-service-interface**.
-
 ### /libxbot-service
 
 Use this library to provide a service to the system. An example would be publishing IMU data or providing motor control
@@ -61,7 +55,7 @@ The library will take care of advertising your service and connecting to the run
 
 Use the **libxbot-service-interface** library to connect to a specific service. For example if there is an IMU service
 on your network, and you want to receive its data (or bridge to ROS), include **libxbot-service-interface** in your
-project.
+project to use your services.
 
 ### /include
 
