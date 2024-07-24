@@ -20,6 +20,13 @@ cog.outl(f'#include "{service["class_name"]}.hpp"')
 #include <xbot-service/Lock.hpp>
 #include <xbot-service/portable/system.hpp>
 
+
+/*[[[cog
+cog.outl(f"constexpr unsigned char {service['class_name']}::SERVICE_DESCRIPTION_CBOR[];")
+]]]*/
+//[[[end]]]
+
+
 /*[[[cog
 cog.outl(f"bool {service['class_name']}::handleData(uint16_t target_id, const void *payload, size_t length) {{")
 ]]]*/

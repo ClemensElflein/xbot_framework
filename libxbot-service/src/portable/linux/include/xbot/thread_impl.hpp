@@ -5,8 +5,8 @@
 #ifndef THREAD_IMPL_HPP
 #define THREAD_IMPL_HPP
 
-#include <pthread.h>
+#include <thread>
 
-#define XBOT_THREAD_TYPEDEF pthread_t
+#define XBOT_THREAD_TYPEDEF std::thread*
 
 #endif  // THREAD_IMPL_HPP

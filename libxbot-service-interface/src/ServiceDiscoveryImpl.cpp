@@ -19,7 +19,10 @@ static void Run();
 
 std::recursive_mutex sd_mutex_{};
 std::map<std::string, ServiceInfo> discovered_services_{};
-std::atomic_flag stopped_{false};
+
+std::mutex stopped_mtx_{};
+bool stopped_{false};
+
 std::thread sd_thread_{};
 Socket sd_socket_{"0.0.0.0", config::multicast_port};
 std::vector<ServiceDiscoveryCallbacks *> registered_callbacks_{};
@@ -46,7 +49,10 @@ bool ServiceDiscoveryImpl::Start() {
   if (!sd_socket_.JoinMulticast(config::sd_multicast_address)) return false;
 
   // Start the ServiceDiscovery Thread
-  stopped_.clear();
+  {
+    std::unique_lock lk{stopped_mtx_};
+    stopped_ = false;
+  }
   sd_thread_ = std::thread{Run};
   return true;
 }
@@ -110,7 +116,10 @@ ServiceDiscoveryImpl *ServiceDiscoveryImpl::GetInstance() {
 
 bool ServiceDiscoveryImpl::Stop() {
   spdlog::info("Shutting down ServiceDiscovery");
-  stopped_.test_and_set();
+  {
+    std::unique_lock lk{stopped_mtx_};
+    stopped_ = true;
+  }
   sd_thread_.join();
   spdlog::info("ServiceDiscovery Stopped.");
   return true;
@@ -121,7 +130,13 @@ void Run() {
   uint32_t sender_ip;
   uint16_t sender_port;
   // While not stopped
-  while (!stopped_.test()) {
+  while (true) {
+    {
+      std::unique_lock lk{stopped_mtx_};
+      if (stopped_)
+        break;
+    }
+
     // Try receive a packet, this will return false on timeout.
     if (sd_socket_.ReceivePacket(sender_ip, sender_port, packet)) {
       // Check, if packet has at least enough space for our header

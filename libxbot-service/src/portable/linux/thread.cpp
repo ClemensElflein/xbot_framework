@@ -7,7 +7,7 @@ using namespace xbot::service::thread;
 bool xbot::service::thread::initialize(ThreadPtr thread,
                                        void* (*threadfunc)(void*), void* arg,
                                        void* stackbuf, size_t buflen) {
-  pthread_create(thread, NULL, threadfunc, arg);
+  *thread = new std::thread(threadfunc, arg);
   return true;
 }
 

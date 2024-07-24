@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.22)
 project(xbot-service C CXX)
 
 
-#set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
@@ -18,6 +18,7 @@ add_library(xbot-service STATIC
 
 if (NOT DEFINED XBOT_CUSTOM_PORT_PATH)
     SET(XBOT_CUSTOM_PORT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/portable/linux)
+    SET(XBOT_CUSTOM_PORT_LIBS pthread)
 else ()
     message("Using custom port at ${XBOT_CUSTOM_PORT_PATH}")
 endif ()
@@ -28,7 +29,7 @@ target_sources(xbot-service PRIVATE ${PORT_SOURCES})
 
 
 target_include_directories(xbot-service PUBLIC include ../include)
-target_link_libraries(xbot-service PUBLIC ulog)
+target_link_libraries(xbot-service PUBLIC ulog ${XBOT_CUSTOM_PORT_LIBS})
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/
         DESTINATION include
