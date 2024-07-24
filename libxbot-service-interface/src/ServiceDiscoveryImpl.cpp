@@ -133,8 +133,7 @@ void Run() {
   while (true) {
     {
       std::unique_lock lk{stopped_mtx_};
-      if (stopped_)
-        break;
+      if (stopped_) break;
     }
 
     // Try receive a packet, this will return false on timeout.
