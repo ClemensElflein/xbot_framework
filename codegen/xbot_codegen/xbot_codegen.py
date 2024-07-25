@@ -35,6 +35,14 @@ def binary2c_array(data):
 def toCamelCase(name):
     return ''.join(x for x in name if not x.isspace())
 
+def check_unique_ids(l):
+    id_set = set()
+    for dict in l:
+        id = dict['id']
+        if id in id_set:
+            raise Exception("Duplicate ID found: {}".format(id))
+        else:
+            id_set.add(id)
 
 def loadService(path: str) -> dict:
     # Fetch the service definition
@@ -54,6 +62,9 @@ def loadService(path: str) -> dict:
     # Transform the input definitions
     additional_includes = []
     inputs = []
+    check_unique_ids(json_service["inputs"])
+    check_unique_ids(json_service["outputs"])
+    check_unique_ids(json_service["registers"])
     for json_input in json_service["inputs"]:
         # Convert to valid C++ function name
         input_name = toCamelCase(json_input['name'])

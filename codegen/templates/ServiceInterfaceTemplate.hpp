@@ -81,7 +81,7 @@ protected:
 
 
 private:
-	void OnData(const std::string &uid, uint64_t timestamp, uint16_t target_id, const void *payload, size_t buflen);
+	void OnData(const std::string &uid, uint64_t timestamp, uint16_t target_id, const void *payload, size_t buflen) final;
   void OnServiceConnected(const std::string &uid) override;
   void OnTransactionStart(uint64_t timestamp) override;
   void OnTransactionEnd() override;
