@@ -195,6 +195,7 @@ void xbot::service::Service::runProcessing() {
     Lock lk(&state_mutex_);
     last_tick_micros_ = system::getTimeMicros();
   }
+  OnCreate();
   clearConfiguration();
   // If after clearing the config, the service is configured, it does not need
   // to be configured.
@@ -420,10 +421,14 @@ void xbot::service::Service::HandleConfigurationTransaction(
   // regster_success checks if all new config was applied correctly,
   // isConfigured() checks if overall config is correct
   if (register_success && isConfigured()) {
-    // successfully set all registers, start the service
-    Configure();
-    OnStart();
-    is_running_ = true;
+    // successfully set all registers, start the service if it was configured correctly
+    if(Configure()) {
+      OnStart();
+      is_running_ = true;
+    } else {
+      // Need to reset configuration, so that a new one is requested
+      clearConfiguration();
+    }
   }
 }
 bool xbot::service::Service::SendConfigurationRequest() {
