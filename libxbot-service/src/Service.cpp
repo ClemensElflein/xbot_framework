@@ -219,8 +219,8 @@ void xbot::service::Service::runProcessing() {
     uint32_t now_micros = system::getTimeMicros();
     // Calculate when the next tick needs to happen (expected tick rate - time
     // elapsed)
-    int32_t block_time = static_cast<int32_t>(tick_rate_micros_ -
-                                              (now_micros - last_tick_micros_));
+    int32_t block_time = tick_rate_micros_ > 0 ? static_cast<int32_t>(tick_rate_micros_ -
+                                              (now_micros - last_tick_micros_)) : 0;
     // If this is ture, we have a rollover (since we should need to wait longer
     // than the tick length)
     if (is_running_) {
