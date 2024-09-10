@@ -30,6 +30,8 @@ class Socket {
    */
   bool Start();
 
+  bool SetBindAddress(std::string bind_address);
+
   /**
    * Join a multicast group.
    *

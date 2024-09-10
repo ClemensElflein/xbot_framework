@@ -28,13 +28,16 @@ std::unique_ptr<crow::SimpleApp> crow_app = nullptr;
 void SignalHandler(int signal) { Stop(); }
 struct sigaction act;
 
-xbot::serviceif::Context xbot::serviceif::Start(bool register_handlers) {
+xbot::serviceif::Context xbot::serviceif::Start(bool register_handlers, std::string bind_ip) {
   std::unique_lock lk{mtx};
 
   if (started) {
     return ctx;
   }
   started = true;
+
+  ServiceIOImpl::SetBindIp(bind_ip);
+  ServiceDiscoveryImpl::SetBindIp(bind_ip);
 
   //
   //  // Register signal handler for graceful shutdown

@@ -113,6 +113,9 @@ ServiceDiscoveryImpl *ServiceDiscoveryImpl::GetInstance() {
   }
   return instance_;
 }
+void ServiceDiscoveryImpl::SetBindIp(std::string bind_ip) {
+  sd_socket_.SetBindAddress(bind_ip);
+}
 
 bool ServiceDiscoveryImpl::Stop() {
   spdlog::info("Shutting down ServiceDiscovery");

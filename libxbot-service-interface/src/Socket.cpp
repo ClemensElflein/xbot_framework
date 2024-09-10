@@ -100,6 +100,13 @@ bool Socket::Start() {
 
   return true;
 }
+bool Socket::SetBindAddress(std::string bind_address) {
+  // Check, if Socket was started already
+  if(fd_ != -1)
+    return false;
+  this->bind_ip_ = std::move(bind_address);
+  return true;
+}
 
 bool Socket::JoinMulticast(std::string ip) {
   if (fd_ == -1) return false;

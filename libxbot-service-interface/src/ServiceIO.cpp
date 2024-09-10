@@ -65,8 +65,7 @@ bool ServiceIOImpl::OnServiceDiscovered(std::string uid) {
   return true;
 }
 
-bool ServiceIOImpl::OnEndpointChanged(std::string uid, uint32_t old_ip,
-                                      uint16_t old_port, uint32_t new_ip,
+bool ServiceIOImpl::OnEndpointChanged(std::string uid, uint32_t old_ip, uint16_t old_port, uint32_t new_ip,
                                       uint16_t new_port) {
   if (old_ip == 0 || old_port == 0) {
     // Invalid endpoint, we never stored this reference
@@ -99,6 +98,9 @@ bool ServiceIOImpl::OnEndpointChanged(std::string uid, uint32_t old_ip,
   inverse_endpoint_map_[uid] = new_key;
 
   return true;
+}
+void ServiceIOImpl::SetBindIp(std::string bind_ip) {
+  io_socket_.SetBindAddress(bind_ip);
 }
 
 ServiceIOImpl *ServiceIOImpl::GetInstance() {
