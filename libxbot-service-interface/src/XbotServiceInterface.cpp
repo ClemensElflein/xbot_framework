@@ -36,8 +36,10 @@ xbot::serviceif::Context xbot::serviceif::Start(bool register_handlers, std::str
   }
   started = true;
 
-  ServiceIOImpl::SetMulticastIfAddress(bind_ip);
+  // Service Discovery needs to join the multicast on the specified interface
   ServiceDiscoveryImpl::SetMulticastIfAddress(bind_ip);
+  // Service IO needs to bind to the specified interface (unicast)
+  ServiceIOImpl::SetBindAddress(bind_ip);
 
   //
   //  // Register signal handler for graceful shutdown

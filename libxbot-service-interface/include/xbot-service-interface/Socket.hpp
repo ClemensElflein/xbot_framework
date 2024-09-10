@@ -31,6 +31,7 @@ class Socket {
   bool Start();
 
   bool SetMulticastIfAddress(std::string multicast_interface_address);
+  bool SetBindAddress(std::string bind_address);
 
   /**
    * Join a multicast group.

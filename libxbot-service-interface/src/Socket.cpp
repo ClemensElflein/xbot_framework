@@ -95,10 +95,16 @@ bool Socket::Start() {
 
   return true;
 }
-bool Socket::SetMulticastIfAddress(std::string bind_address) {
+bool Socket::SetMulticastIfAddress(std::string multicast_if_address) {
   // Check, if Socket was started already
   if (fd_ != -1) return false;
-  this->multicast_interface_address_ = std::move(bind_address);
+  this->multicast_interface_address_ = std::move(multicast_if_address);
+  return true;
+}
+bool Socket::SetBindAddress(std::string bind_address) {
+  // Check, if Socket was started already
+  if (fd_ != -1) return false;
+  this->bind_ip_ = std::move(bind_address);
   return true;
 }
 
