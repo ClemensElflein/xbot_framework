@@ -30,7 +30,7 @@ class Socket {
    */
   bool Start();
 
-  bool SetBindAddress(std::string bind_address);
+  bool SetMulticastIfAddress(std::string multicast_interface_address);
 
   /**
    * Join a multicast group.
@@ -115,6 +115,7 @@ class Socket {
   int fd_ = -1;
 
   std::string bind_ip_;
+  std::string multicast_interface_address_{"0.0.0.0"};
   uint16_t bind_port_;
 };
 }  // namespace xbot::serviceif

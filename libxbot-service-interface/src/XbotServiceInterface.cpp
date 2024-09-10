@@ -36,8 +36,8 @@ xbot::serviceif::Context xbot::serviceif::Start(bool register_handlers, std::str
   }
   started = true;
 
-  ServiceIOImpl::SetBindIp(bind_ip);
-  ServiceDiscoveryImpl::SetBindIp(bind_ip);
+  ServiceIOImpl::SetMulticastIfAddress(bind_ip);
+  ServiceDiscoveryImpl::SetMulticastIfAddress(bind_ip);
 
   //
   //  // Register signal handler for graceful shutdown

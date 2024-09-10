@@ -113,8 +113,8 @@ ServiceDiscoveryImpl *ServiceDiscoveryImpl::GetInstance() {
   }
   return instance_;
 }
-void ServiceDiscoveryImpl::SetBindIp(std::string bind_ip) {
-  sd_socket_.SetBindAddress(bind_ip);
+void ServiceDiscoveryImpl::SetMulticastIfAddress(std::string multicast_if_address) {
+  sd_socket_.SetMulticastIfAddress(multicast_if_address);
 }
 
 bool ServiceDiscoveryImpl::Stop() {

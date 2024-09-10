@@ -99,8 +99,8 @@ bool ServiceIOImpl::OnEndpointChanged(std::string uid, uint32_t old_ip, uint16_t
 
   return true;
 }
-void ServiceIOImpl::SetBindIp(std::string bind_ip) {
-  io_socket_.SetBindAddress(bind_ip);
+void ServiceIOImpl::SetMulticastIfAddress(std::string multicast_if_address) {
+  io_socket_.SetMulticastIfAddress(multicast_if_address);
 }
 
 ServiceIOImpl *ServiceIOImpl::GetInstance() {

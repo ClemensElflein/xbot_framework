@@ -57,7 +57,7 @@ class ServiceDiscoveryImpl : public ServiceDiscovery {
   bool DropService(const std::string &uid);
 
   static ServiceDiscoveryImpl *GetInstance();
- static void SetBindIp(std::string bind_ip);
+ static void SetMulticastIfAddress(std::string multicast_if_address);
 };
 }  // namespace xbot::serviceif
 

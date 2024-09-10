@@ -37,14 +37,10 @@ bool get_ip(std::string &ip) {
     // Skip loopback and virtual interfaces by checking interface name prefixes
     // This list was suggested by ChatGPT, not sure if it's complete, but it
     // looks good to me.
-    if (strncmp(ifr.ifr_name, "lo", 2) == 0 ||
-        strncmp(ifr.ifr_name, "docker", 6) == 0 ||
-        strncmp(ifr.ifr_name, "veth", 4) == 0 ||
-        strncmp(ifr.ifr_name, "virbr", 5) == 0 ||
-        strncmp(ifr.ifr_name, "br-", 3) == 0 ||
-        strncmp(ifr.ifr_name, "wg", 2) == 0 ||
-        strncmp(ifr.ifr_name, "tun", 3) == 0 ||
-        strncmp(ifr.ifr_name, "tap", 3) == 0) {
+    if (strncmp(ifr.ifr_name, "lo", 2) == 0 || strncmp(ifr.ifr_name, "docker", 6) == 0 ||
+        strncmp(ifr.ifr_name, "veth", 4) == 0 || strncmp(ifr.ifr_name, "virbr", 5) == 0 ||
+        strncmp(ifr.ifr_name, "br-", 3) == 0 || strncmp(ifr.ifr_name, "wg", 2) == 0 ||
+        strncmp(ifr.ifr_name, "tun", 3) == 0 || strncmp(ifr.ifr_name, "tap", 3) == 0) {
       continue;
     }
 
@@ -54,8 +50,7 @@ bool get_ip(std::string &ip) {
       break;
     }
 
-    const char *addrStr = inet_ntoa(
-        reinterpret_cast<struct sockaddr_in *>(&ifr.ifr_addr)->sin_addr);
+    const char *addrStr = inet_ntoa(reinterpret_cast<struct sockaddr_in *>(&ifr.ifr_addr)->sin_addr);
     ip = addrStr;
     success = true;
     break;
@@ -100,26 +95,24 @@ bool Socket::Start() {
 
   return true;
 }
-bool Socket::SetBindAddress(std::string bind_address) {
+bool Socket::SetMulticastIfAddress(std::string bind_address) {
   // Check, if Socket was started already
-  if(fd_ != -1)
-    return false;
-  this->bind_ip_ = std::move(bind_address);
+  if (fd_ != -1) return false;
+  this->multicast_interface_address_ = std::move(bind_address);
   return true;
 }
 
 bool Socket::JoinMulticast(std::string ip) {
   if (fd_ == -1) return false;
   ip_mreq opt{};
-  opt.imr_interface.s_addr = 0;  // inet_addr("192.168.65.3");
+  opt.imr_interface.s_addr = inet_addr(multicast_interface_address_.c_str());
   opt.imr_multiaddr.s_addr = inet_addr(ip.c_str());
 
-  // if (setsockopt(fd_, IPPROTO_IP, IP_MULTICAST_IF, &opt.imr_interface,
-  // sizeof(opt.imr_interface)) < 0) {
-  // close(fd_);
-  // fd_ = -1;
-  // return false;
-  // }
+  if (setsockopt(fd_, IPPROTO_IP, IP_MULTICAST_IF, &opt.imr_interface, sizeof(opt.imr_interface)) < 0) {
+    close(fd_);
+    fd_ = -1;
+    return false;
+  }
 
   if (setsockopt(fd_, IPPROTO_IP, IP_ADD_MEMBERSHIP, &opt, sizeof(opt)) < 0) {
     close(fd_);
@@ -129,8 +122,7 @@ bool Socket::JoinMulticast(std::string ip) {
   return true;
 }
 
-bool Socket::ReceivePacket(uint32_t &sender_ip, uint16_t &sender_port,
-                           std::vector<uint8_t> &data) const {
+bool Socket::ReceivePacket(uint32_t &sender_ip, uint16_t &sender_port, std::vector<uint8_t> &data) const {
   if (fd_ == -1) return false;
   data.clear();
 
@@ -140,8 +132,7 @@ bool Socket::ReceivePacket(uint32_t &sender_ip, uint16_t &sender_port,
   data.resize(config::max_packet_size);
 
   const ssize_t recvLen =
-      recvfrom(fd_, data.data(), data.size(), 0,
-               reinterpret_cast<struct sockaddr *>(&fromAddr), &fromLen);
+      recvfrom(fd_, data.data(), data.size(), 0, reinterpret_cast<struct sockaddr *>(&fromAddr), &fromLen);
   if (recvLen < 0) {
     return false;
   }
@@ -152,39 +143,33 @@ bool Socket::ReceivePacket(uint32_t &sender_ip, uint16_t &sender_port,
   return true;
 }
 
-bool Socket::TransmitPacket(uint32_t ip, uint16_t port,
-                            const std::vector<uint8_t> &data) const {
+bool Socket::TransmitPacket(uint32_t ip, uint16_t port, const std::vector<uint8_t> &data) const {
   if (fd_ == -1) return false;
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
   addr.sin_addr.s_addr = htonl(ip);
 
-  sendto(fd_, data.data(), data.size(), 0,
-         reinterpret_cast<const sockaddr *>(&addr), sizeof(addr));
+  sendto(fd_, data.data(), data.size(), 0, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr));
 
   return true;
 }
 
-bool Socket::TransmitPacket(std::string ip, uint16_t port,
-                            const std::vector<uint8_t> &data) const {
+bool Socket::TransmitPacket(std::string ip, uint16_t port, const std::vector<uint8_t> &data) const {
   return TransmitPacket(ntohl(inet_addr(ip.c_str())), port, data);
 }
-bool Socket::TransmitPacket(uint32_t ip, uint16_t port, const uint8_t *data,
-                            size_t buflen) const {
+bool Socket::TransmitPacket(uint32_t ip, uint16_t port, const uint8_t *data, size_t buflen) const {
   if (fd_ == -1) return false;
   sockaddr_in addr{};
   addr.sin_family = AF_INET;
   addr.sin_port = htons(port);
   addr.sin_addr.s_addr = htonl(ip);
 
-  sendto(fd_, data, buflen, 0, reinterpret_cast<const sockaddr *>(&addr),
-         sizeof(addr));
+  sendto(fd_, data, buflen, 0, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr));
 
   return true;
 }
-bool Socket::TransmitPacket(std::string ip, uint16_t port, const uint8_t *data,
-                            size_t buflen) const {
+bool Socket::TransmitPacket(std::string ip, uint16_t port, const uint8_t *data, size_t buflen) const {
   return TransmitPacket(ntohl(inet_addr(ip.c_str())), port, data, buflen);
 }
 
@@ -194,8 +179,7 @@ bool Socket::GetEndpoint(std::string &ip, uint16_t &port) const {
   sockaddr_in addr{};
   socklen_t addrLen = sizeof(addr);
 
-  if (getsockname(fd_, reinterpret_cast<sockaddr *>(&addr), &addrLen) < 0)
-    return false;
+  if (getsockname(fd_, reinterpret_cast<sockaddr *>(&addr), &addrLen) < 0) return false;
 
   if (addr.sin_addr.s_addr == 0) {
     // Socket bound to all interfaces, get primary IP
