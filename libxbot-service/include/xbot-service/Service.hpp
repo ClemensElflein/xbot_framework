@@ -77,6 +77,11 @@ class Service : public ServiceIo {
   virtual void OnStart() = 0;
 
   /**
+   * Called before Configure()
+   */
+  virtual void OnCreate() = 0;
+
+  /**
    * Called before reconfiguring the service for cleanup
    */
   virtual void OnStop() = 0;

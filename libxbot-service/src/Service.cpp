@@ -195,6 +195,7 @@ void xbot::service::Service::runProcessing() {
     Lock lk(&state_mutex_);
     last_tick_micros_ = system::getTimeMicros();
   }
+  OnCreate();
   clearConfiguration();
   // If after clearing the config, the service is configured, it does not need
   // to be configured.
@@ -218,8 +219,8 @@ void xbot::service::Service::runProcessing() {
     uint32_t now_micros = system::getTimeMicros();
     // Calculate when the next tick needs to happen (expected tick rate - time
     // elapsed)
-    int32_t block_time = static_cast<int32_t>(tick_rate_micros_ -
-                                              (now_micros - last_tick_micros_));
+    int32_t block_time = tick_rate_micros_ > 0 ? static_cast<int32_t>(tick_rate_micros_ -
+                                              (now_micros - last_tick_micros_)) : 0;
     // If this is ture, we have a rollover (since we should need to wait longer
     // than the tick length)
     if (is_running_) {
@@ -420,10 +421,14 @@ void xbot::service::Service::HandleConfigurationTransaction(
   // regster_success checks if all new config was applied correctly,
   // isConfigured() checks if overall config is correct
   if (register_success && isConfigured()) {
-    // successfully set all registers, start the service
-    Configure();
-    OnStart();
-    is_running_ = true;
+    // successfully set all registers, start the service if it was configured correctly
+    if(Configure()) {
+      OnStart();
+      is_running_ = true;
+    } else {
+      // Need to reset configuration, so that a new one is requested
+      clearConfiguration();
+    }
   }
 }
 bool xbot::service::Service::SendConfigurationRequest() {
