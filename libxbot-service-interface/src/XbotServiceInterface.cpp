@@ -68,13 +68,13 @@ xbot::serviceif::Context xbot::serviceif::Start(bool register_handlers, std::str
   crow::SimpleApp &app = *crow_app;
 
   CROW_ROUTE(app, "/")
-  ([]() { return "OK"; });
+      ([]() { return "OK"; });
   CROW_ROUTE(app, "/services")
   ([sdImpl]() {
     nlohmann::json result = nlohmann::detail::value_t::object;
     const auto services = sdImpl->GetAllServices();
 
-    for (const auto &s : *services) {
+    for (const auto &s: *services) {
       result[s.first] = s.second;
     }
     return result.dump(2);
@@ -85,9 +85,9 @@ xbot::serviceif::Context xbot::serviceif::Start(bool register_handlers, std::str
         CROW_LOG_INFO << "New Websocket Connection";
       })
       .onclose(
-          [&](crow::websocket::connection &conn, const std::string &reason) {
-            CROW_LOG_INFO << "Closed Connection. Reason: " << reason;
-          })
+        [&](crow::websocket::connection &conn, const std::string &reason) {
+          CROW_LOG_INFO << "Closed Connection. Reason: " << reason;
+        })
       .onmessage([&](crow::websocket::connection & /*conn*/,
                      const std::string &data, bool is_binary) {
         CROW_LOG_INFO << "New Websocket Message: " << data;
@@ -105,6 +105,7 @@ xbot::serviceif::Context xbot::serviceif::Start(bool register_handlers, std::str
   }
   return ctx;
 }
+
 void xbot::serviceif::Stop() {
   spdlog::info("Shutting Down");
   std::unique_lock lk{mtx};
