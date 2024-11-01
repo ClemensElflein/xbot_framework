@@ -37,9 +37,8 @@ class Service : public ServiceIo {
    * @param service Pointer to the service to start
    * @return null
    */
-  static void *startProcessingHelper(void *service) {
+  static void startProcessingHelper(void *service) {
     static_cast<Service *>(service)->runProcessing();
-    return nullptr;
   }
 
  protected:
