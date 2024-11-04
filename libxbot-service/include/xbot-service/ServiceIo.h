@@ -29,8 +29,6 @@ class ServiceIo {
   // True, if service is stopped
   bool stopped = true;
 
-  XBOT_SOCKET_TYPEDEF udp_socket_{};
-
   // Storage for the queue
   static constexpr size_t packet_queue_length = 10;
   uint8_t packet_queue_buffer[packet_queue_length * sizeof(void *)]{};

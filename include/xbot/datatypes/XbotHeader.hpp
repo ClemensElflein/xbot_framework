@@ -46,10 +46,13 @@ struct XbotHeader {
   // Bit 0: Reboot (1 after service started, 0 after sequence_no rolled over at
   // least once)
   uint8_t flags{};
+  uint8_t reserved1{};
+  uint16_t service_id{};
   // Reserved for message specific payload (e.g. log level for log message)
   // Log Message: Log level
   // Transaction: Type: 0 = Data transaction, 1 = Configuration Transaction
   uint8_t arg1{};
+  uint8_t reserved2{};
   // Reserved for message specific payload (e.g. target_id for data message)
   uint16_t arg2{};
   // Sequence number, increment on each message. Clear "reboot" flag on roll

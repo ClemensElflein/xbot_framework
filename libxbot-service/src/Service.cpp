@@ -21,7 +21,6 @@ xbot::service::Service::Service(uint16_t service_id, uint32_t tick_rate_micros,
       tick_rate_micros_(tick_rate_micros) {}
 
 xbot::service::Service::~Service() {
-  sock::deinitialize(&udp_socket_);
   mutex::deinitialize(&state_mutex_);
   thread::deinitialize(&process_thread_);
 }
@@ -32,9 +31,7 @@ bool xbot::service::Service::start() {
   // Set reboot flag
   header_.flags = 1;
 
-  if (!sock::initialize(&udp_socket_, false)) {
-    return false;
-  }
+
   if (!mutex::initialize(&state_mutex_)) {
     return false;
   }
@@ -93,7 +90,7 @@ bool xbot::service::Service::SendData(uint16_t target_id, const void *data,
     packet::packetAppendData(ptr, &header_, sizeof(header_));
   }
   packet::packetAppendData(ptr, data, size);
-  return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
+  return Io::transmitPacket(ptr, target_ip, target_port);
 }
 
 bool xbot::service::Service::SendDataClaimAck() {
@@ -113,7 +110,7 @@ bool xbot::service::Service::SendDataClaimAck() {
     packet::packetAppendData(ptr, &header_, sizeof(header_));
   }
 
-  return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
+  return Io::transmitPacket(ptr, target_ip, target_port);
 }
 bool xbot::service::Service::StartTransaction(uint64_t timestamp) {
   if (transaction_started_) {
@@ -151,10 +148,11 @@ bool xbot::service::Service::CommitTransaction() {
   packet::packetAppendData(ptr, scratch_buffer, scratch_buffer_fill_);
   // done with the scratch buffer, release it
   mutex::unlockMutex(&state_mutex_);
-  return sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
+  return Io::transmitPacket(ptr, target_ip, target_port);
 }
 
 void xbot::service::Service::fillHeader() {
+  header_.service_id = service_id_;
   header_.message_type = datatypes::MessageType::UNKNOWN;
   header_.payload_size = 0;
   header_.protocol_version = 1;
@@ -162,7 +160,7 @@ void xbot::service::Service::fillHeader() {
   header_.arg2 = 0;
   header_.sequence_no++;
   if (header_.sequence_no == 0) {
-    // Clear reboot flag on rolloger
+    // Clear reboot flag on rollover
     header_.flags &= 0xFE;
   }
   header_.timestamp = system::getTimeMicros();
@@ -185,7 +183,7 @@ void xbot::service::Service::heartbeat() {
 
     packet::packetAppendData(ptr, &header_, sizeof(header_));
   }
-  sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
+  Io::transmitPacket(ptr, target_ip, target_port);
   last_heartbeat_micros_ = system::getTimeMicros();
 }
 
@@ -444,7 +442,7 @@ bool xbot::service::Service::SendConfigurationRequest() {
 
     packet::packetAppendData(ptr, &header_, sizeof(header_));
   }
-  sock::transmitPacket(&udp_socket_, ptr, target_ip, target_port);
+  Io::transmitPacket(ptr, target_ip, target_port);
   last_configuration_request_micros_ = system::getTimeMicros();
   return true;
 }
