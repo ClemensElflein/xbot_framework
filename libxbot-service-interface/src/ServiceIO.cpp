@@ -18,11 +18,9 @@
 using namespace xbot::serviceif;
 
 /**
- * Maps endpoint to state. Pointers are used so that we can move the state for
- * cheap once the endpoint changes.
+ * Maps service_id to state.
  */
-std::map<uint64_t, std::unique_ptr<ServiceState> > endpoint_map_{};
-std::map<std::string, uint64_t> inverse_endpoint_map_{};
+std::map<uint16_t, std::unique_ptr<ServiceState> > endpoint_map_{};
 
 // Protects inverse_endpoint_map_, endpoint_map_ and instance_
 std::recursive_mutex state_mutex_{};
@@ -38,66 +36,34 @@ std::chrono::time_point<std::chrono::steady_clock> last_check_{
 };
 
 // keep a list of callbacks for each service
-std::map<std::string, std::vector<ServiceIOCallbacks *> >
+std::map<uint16_t, std::vector<ServiceIOCallbacks *> >
 registered_callbacks_{};
 
-bool ServiceIOImpl::OnServiceDiscovered(std::string uid) {
+bool ServiceIOImpl::OnServiceDiscovered(uint16_t service_id) {
   std::unique_lock lk{state_mutex_};
 
   uint32_t service_ip = 0;
   uint16_t service_port = 0;
 
-  if (service_discovery->GetEndpoint(uid, service_ip, service_port) &&
+  if (service_discovery->GetEndpoint(service_id, service_ip, service_port) &&
       service_ip != 0 && service_port != 0) {
-    // Got valid enpdoint, create a state
-    uint64_t key = BuildKey(service_ip, service_port);
-    if (endpoint_map_.contains(key)) {
+    // Got valid endpoint, create a state
+    if (endpoint_map_.contains(service_id)) {
       spdlog::warn(
         "Service state already exists, overwriting with new state. This "
         "might have unforseen consequences.");
-      endpoint_map_.erase(key);
+      endpoint_map_.erase(service_id);
     }
     std::unique_ptr<ServiceState> state = std::make_unique<ServiceState>();
-    state->uid = uid;
-    endpoint_map_.emplace(key, std::move(state));
-    inverse_endpoint_map_[uid] = key;
+    endpoint_map_.emplace(service_id, std::move(state));
   }
 
   return true;
 }
 
-bool ServiceIOImpl::OnEndpointChanged(std::string uid, uint32_t old_ip, uint16_t old_port, uint32_t new_ip,
+bool ServiceIOImpl::OnEndpointChanged(uint16_t service_id, uint32_t old_ip, uint16_t old_port, uint32_t new_ip,
                                       uint16_t new_port) {
-  if (old_ip == 0 || old_port == 0) {
-    // Invalid endpoint, we never stored this reference
-    return true;
-  }
-
-  std::unique_lock lk{state_mutex_};
-
-  // Got valid enpdoint, create a state
-  uint64_t old_key = BuildKey(old_ip, old_port);
-  uint64_t new_key = BuildKey(new_ip, new_port);
-
-  if (endpoint_map_.contains(new_key)) {
-    spdlog::warn(
-      "Service state already exists, overwriting with new state. This might "
-      "have unforseen consequences.");
-    endpoint_map_.erase(new_key);
-  }
-
-  if (!endpoint_map_.contains(old_key)) {
-    spdlog::warn(
-      "Service state did not exist, so we cannot update it. Creating a new "
-      "one instead.");
-    endpoint_map_.emplace(new_key, std::make_unique<ServiceState>());
-  } else {
-    endpoint_map_.emplace(new_key, std::move(endpoint_map_.at(old_key)));
-    endpoint_map_.erase(old_key);
-  }
-
-  inverse_endpoint_map_[uid] = new_key;
-
+  // We don't actually care about endpoint changes.
   return true;
 }
 
@@ -122,10 +88,11 @@ bool ServiceIOImpl::Start() { {
   return true;
 }
 
-void ServiceIOImpl::RegisterCallbacks(const std::string &uid,
+void ServiceIOImpl::RegisterCallbacks(uint16_t service_id,
                                       ServiceIOCallbacks *callbacks) {
   std::unique_lock lk{state_mutex_};
-  auto &vector = registered_callbacks_[uid];
+  // Square bracket notation is correct, we create an empty vector, if non-existent
+  auto &vector = registered_callbacks_[service_id];
 
   // Check, if callbacks already registered
   if (std::find(vector.begin(), vector.end(), callbacks) != vector.end()) {
@@ -151,18 +118,16 @@ void ServiceIOImpl::UnregisterCallbacks(ServiceIOCallbacks *callbacks) {
   }
 }
 
-bool ServiceIOImpl::SendData(const std::string &uid,
+bool ServiceIOImpl::SendData(uint16_t service_id,
                              const std::vector<uint8_t> &data) {
-  uint64_t endpoint; {
-    std::unique_lock lk{state_mutex_};
-    if (!inverse_endpoint_map_.contains(uid)) {
-      spdlog::warn("no endpoint for service {}", uid);
-      return false;
-    }
-    endpoint = inverse_endpoint_map_.at(uid);
+  uint32_t ip = 0;
+  uint16_t port = 0;
+  if (!service_discovery->GetEndpoint(service_id, ip, port)) {
+    spdlog::warn("no endpoint for service {}", service_id);
+    return false;
   }
 
-  return TransmitPacket(endpoint, data);
+  return TransmitPacket(ip, port, data);
 }
 
 void ServiceIOImpl::RunIo() {
@@ -199,22 +164,18 @@ void ServiceIOImpl::RunIo() {
                                         config::heartbeat_jitter)) {
             spdlog::warn("Service timed out, removing service.");
 
-            const auto &uid = it->second->uid;
-
             // Drop service from discovery, so that it will get
             // rediscovered later
-            service_discovery->DropService(uid);
+            service_discovery->DropService(it->first);
 
             // Notify callbacks for that service
-            if (const auto cb_it = registered_callbacks_.find(uid);
+            if (const auto cb_it = registered_callbacks_.find(it->first);
               cb_it != registered_callbacks_.end()) {
               for (const auto &cb: cb_it->second) {
-                cb->OnServiceDisconnected(uid);
+                cb->OnServiceDisconnected(it->first);
               }
             }
 
-            // Erase and advance iterator
-            inverse_endpoint_map_.erase(uid);
             it = endpoint_map_.erase(it);
           } else {
             // No timeout, go to next
@@ -233,31 +194,30 @@ void ServiceIOImpl::RunIo() {
           spdlog::error("Got packet with invalid size");
           continue;
         }
-        uint64_t key = BuildKey(sender_ip, sender_port);
 
         const uint8_t *const payload_buffer =
             packet.data() + sizeof(datatypes::XbotHeader);
 
         switch (header->message_type) {
           case datatypes::MessageType::CLAIM:
-            HandleClaimMessage(key, header, payload_buffer,
+            HandleClaimMessage(header, payload_buffer,
                                header->payload_size);
             break;
           case datatypes::MessageType::DATA:
-            HandleDataMessage(key, header, payload_buffer,
+            HandleDataMessage(header, payload_buffer,
                               header->payload_size);
             break;
           case datatypes::MessageType::CONFIGURATION_REQUEST:
-            HandleConfigurationRequest(key, header, payload_buffer,
+            HandleConfigurationRequest(header, payload_buffer,
                                        header->payload_size);
             break;
           case datatypes::MessageType::HEARTBEAT:
-            HandleHeartbeatMessage(key, header, payload_buffer,
+            HandleHeartbeatMessage(header, payload_buffer,
                                    header->payload_size);
             break;
           case datatypes::MessageType::TRANSACTION:
             if (header->arg1 == 0) {
-              HandleDataTransaction(key, header, payload_buffer,
+              HandleDataTransaction(header, payload_buffer,
                                     header->payload_size);
             } else {
               spdlog::warn("Got transaction with unknown type");
@@ -272,14 +232,14 @@ void ServiceIOImpl::RunIo() {
   }
 }
 
-void ServiceIOImpl::ClaimService(uint64_t key) {
+void ServiceIOImpl::ClaimService(uint16_t service_id) {
   std::unique_lock lk{state_mutex_};
-  if (!endpoint_map_.contains(key)) {
+  if (!endpoint_map_.contains(service_id)) {
     // Cannot try to claim a service which was not even discovered
     spdlog::error("Tried to claim a service which was not in the endpoint map");
     return;
   }
-  const auto &state = endpoint_map_.at(key);
+  const auto &state = endpoint_map_.at(service_id);
 
   // Check, if we recently sent the claim. If not, try again
   auto now = std::chrono::steady_clock::now();
@@ -322,24 +282,21 @@ void ServiceIOImpl::ClaimService(uint64_t key) {
   payload_ptr->target_port = my_port;
   payload_ptr->heartbeat_micros = config::default_heartbeat_micros;
   spdlog::info("Sending Service Claim");
-  TransmitPacket(key, packet);
+  SendData(service_id, packet);
 }
 
-bool ServiceIOImpl::TransmitPacket(uint64_t key,
+bool ServiceIOImpl::TransmitPacket(uint32_t ip, uint16_t port,
                                    const std::vector<uint8_t> &data) {
-  uint32_t service_ip = key >> 32;
-  uint32_t service_port = key & 0xFFFF;
-
-  if (service_ip == 0 || service_port == 0) {
+  if (ip == 0 || port == 0) {
     return false;
   }
-  return io_socket_.TransmitPacket(service_ip, service_port, data);
+  return io_socket_.TransmitPacket(ip, port, data);
 }
 
-void ServiceIOImpl::HandleClaimMessage(uint64_t key,
-                                       xbot::datatypes::XbotHeader *header,
+void ServiceIOImpl::HandleClaimMessage(xbot::datatypes::XbotHeader *header,
                                        const uint8_t *payload,
                                        size_t payload_len) {
+  uint16_t service_id = header->service_id;
   if (header->arg1 != 1) {
     // Not actually an ack
     spdlog::warn("received claim ack without arg1==1");
@@ -347,11 +304,11 @@ void ServiceIOImpl::HandleClaimMessage(uint64_t key,
   }
 
   std::unique_lock lk{state_mutex_};
-  if (!endpoint_map_.contains(key)) {
+  if (!endpoint_map_.contains(service_id)) {
     spdlog::warn("received claim ack from wrong service");
     return;
   }
-  const auto &ptr = endpoint_map_.at(key);
+  const auto &ptr = endpoint_map_.at(service_id);
   // Also count the ack as heartbeat in order to not instantly timeout
   ptr->last_heartbeat_received_ = std::chrono::steady_clock::now();
 
@@ -363,62 +320,62 @@ void ServiceIOImpl::HandleClaimMessage(uint64_t key,
   spdlog::info("Successfully claimed service");
 
   // Notify callbacks for that service
-  if (const auto it = registered_callbacks_.find(ptr->uid);
+  if (const auto it = registered_callbacks_.find(service_id);
     it != registered_callbacks_.end()) {
     for (const auto &cb: it->second) {
-      cb->OnServiceConnected(ptr->uid);
+      cb->OnServiceConnected(service_id);
     }
   }
 }
 
-void ServiceIOImpl::HandleDataMessage(uint64_t key,
-                                      xbot::datatypes::XbotHeader *header,
+void ServiceIOImpl::HandleDataMessage(xbot::datatypes::XbotHeader *header,
                                       const uint8_t *payload,
-                                      size_t payload_len) { {
+                                      size_t payload_len) {
+  uint16_t service_id = header->service_id; {
     std::unique_lock lk{state_mutex_};
-    if (!endpoint_map_.contains(key)) {
+    if (!endpoint_map_.contains(service_id)) {
       spdlog::debug("got data from wrong service");
       return;
     }
-    if (!endpoint_map_.at(key)->claimed_successfully_) {
+    if (!endpoint_map_.at(service_id)->claimed_successfully_) {
       spdlog::debug("Got data from an unclaimed service, dropping it.");
       return;
     }
   }
-  const auto &ptr = endpoint_map_.at(key);
+  const auto &ptr = endpoint_map_.at(service_id);
 
   // Notify callbacks for that service
-  if (const auto it = registered_callbacks_.find(ptr->uid);
+  if (const auto it = registered_callbacks_.find(service_id);
     it != registered_callbacks_.end()) {
     for (const auto &cb: it->second) {
-      cb->OnData(ptr->uid, header->timestamp, header->arg2, payload,
+      cb->OnData(service_id, header->timestamp, header->arg2, payload,
                  header->payload_size);
     }
   }
 }
 
-void ServiceIOImpl::HandleDataTransaction(uint64_t key,
-                                          xbot::datatypes::XbotHeader *header,
+void ServiceIOImpl::HandleDataTransaction(xbot::datatypes::XbotHeader *header,
                                           const uint8_t *payload,
-                                          size_t payload_len) { {
+                                          size_t payload_len) {
+  uint16_t service_id = header->service_id; {
     std::unique_lock lk{state_mutex_};
-    if (!endpoint_map_.contains(key)) {
+    if (!endpoint_map_.contains(service_id)) {
       // This happens if we restart the interface and an unknown service sends
       // us data.
       spdlog::debug("got data from wrong service");
       return;
     }
-    if (!endpoint_map_.at(key)->claimed_successfully_) {
+    if (!endpoint_map_.at(service_id)->claimed_successfully_) {
       // This happens if we restart the interface and a previously claimed
       // service is still sending data.
       spdlog::debug("Got data from an unclaimed service, dropping it.");
       return;
     }
   }
-  const auto &state_ptr = endpoint_map_.at(key);
+  const auto &state_ptr = endpoint_map_.at(service_id);
 
   // Notify callbacks for that service
-  if (const auto it = registered_callbacks_.find(state_ptr->uid);
+  if (const auto it = registered_callbacks_.find(service_id);
     it != registered_callbacks_.end()) {
     for (const auto &cb: it->second) {
       cb->OnTransactionStart(header->timestamp);
@@ -435,7 +392,7 @@ void ServiceIOImpl::HandleDataTransaction(uint64_t key,
             header->payload_size) {
           // we can safely read the data
           cb->OnData(
-            state_ptr->uid, header->timestamp, descriptor->target_id,
+            service_id, header->timestamp, descriptor->target_id,
             payload + processed_len + sizeof(datatypes::DataDescriptor),
             data_size);
         } else {
@@ -456,40 +413,42 @@ void ServiceIOImpl::HandleDataTransaction(uint64_t key,
   }
 }
 
-void ServiceIOImpl::HandleHeartbeatMessage(uint64_t key,
-                                           xbot::datatypes::XbotHeader *header,
+void ServiceIOImpl::HandleHeartbeatMessage(xbot::datatypes::XbotHeader *header,
                                            const uint8_t *payload,
                                            size_t payload_len) {
+  uint16_t service_id = header->service_id;
+
   std::unique_lock lk{state_mutex_};
-  if (!endpoint_map_.contains(key)) {
+  if (!endpoint_map_.contains(service_id)) {
     spdlog::warn("received heartbeat from wrong service");
     return;
   }
-  endpoint_map_.at(key)->last_heartbeat_received_ =
+  endpoint_map_.at(service_id)->last_heartbeat_received_ =
       std::chrono::steady_clock::now();
 }
 
-void ServiceIOImpl::HandleConfigurationRequest(
-  uint64_t key, xbot::datatypes::XbotHeader *header, const uint8_t *payload,
-  size_t payload_len) {
+void ServiceIOImpl::HandleConfigurationRequest(xbot::datatypes::XbotHeader *header, const uint8_t *payload,
+                                               size_t payload_len) {
+  uint16_t service_id = header->service_id;
+
   std::unique_lock lk{state_mutex_};
-  if (!endpoint_map_.contains(key)) {
+  if (!endpoint_map_.contains(service_id)) {
     spdlog::debug("got config request from wrong service");
     return;
   }
-  if (!endpoint_map_.at(key)->claimed_successfully_) {
+  if (!endpoint_map_.at(service_id)->claimed_successfully_) {
     spdlog::debug("Got config request from an unclaimed service, dropping it.");
     return;
   }
 
-  const auto &ptr = endpoint_map_.at(key);
+  const auto &ptr = endpoint_map_.at(service_id);
 
   // Notify callbacks for that service
   bool configuration_handled = false;
-  if (const auto it = registered_callbacks_.find(ptr->uid);
+  if (const auto it = registered_callbacks_.find(service_id);
     it != registered_callbacks_.end()) {
     for (const auto &cb: it->second) {
-      if (cb->OnConfigurationRequested(ptr->uid)) {
+      if (cb->OnConfigurationRequested(service_id)) {
         configuration_handled = true;
         break;
       }
@@ -500,7 +459,7 @@ void ServiceIOImpl::HandleConfigurationRequest(
       "service {} requires configuration, but no handler provided any "
       "configuration. "
       "The service won't start.",
-      ptr->uid);
+      service_id);
   }
 }
 

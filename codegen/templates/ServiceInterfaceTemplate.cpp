@@ -18,9 +18,9 @@ cog.outl(f'#include <{service["interface_class_name"]}.hpp>')
 #include <cstring>
 #include <spdlog/spdlog.h>
 /*[[[cog
-cog.outl(f"void {service['interface_class_name']}::OnData(const std::string &uid, uint64_t timestamp, uint16_t target_id, const void *payload, size_t length) {{")
+cog.outl(f"void {service['interface_class_name']}::OnData(uint16_t service_id, uint64_t timestamp, uint16_t target_id, const void *payload, size_t length) {{")
 ]]]*/
-void ServiceTemplateInterfaceBase::OnData(const std::string &uid, uint64_t timestamp, uint16_t target_id, const void *payload, size_t length) {
+void ServiceTemplateInterfaceBase::OnData(uint16_t service_id, uint64_t timestamp, uint16_t target_id, const void *payload, size_t length) {
 //[[[end]]]
     // Call the callback for this input
         switch (target_id) {
@@ -103,13 +103,13 @@ bool ServiceTemplateInterfaceBase::SendExampleInput2(const uint32_t &data) {
 //[[[end]]]
 
 /*[[[cog
-cog.outl(f"void {service['interface_class_name']}::OnServiceConnected(const std::string &uid) {{}};")
+cog.outl(f"void {service['interface_class_name']}::OnServiceConnected(uint16_t service_id) {{}};")
 cog.outl(f"void {service['interface_class_name']}::OnTransactionStart(uint64_t timestamp) {{}};")
 cog.outl(f"void {service['interface_class_name']}::OnTransactionEnd() {{}};")
-cog.outl(f"void {service['interface_class_name']}::OnServiceDisconnected(const std::string &uid) {{}};")
+cog.outl(f"void {service['interface_class_name']}::OnServiceDisconnected(uint16_t service_id) {{}};")
 ]]]*/
-void ServiceTemplateInterfaceBase::OnServiceConnected(const std::string &uid) {};
+void ServiceTemplateInterfaceBase::OnServiceConnected(uint16_t service_id) {};
 void ServiceTemplateInterfaceBase::OnTransactionStart(uint64_t timestamp) {};
 void ServiceTemplateInterfaceBase::OnTransactionEnd() {};
-void ServiceTemplateInterfaceBase::OnServiceDisconnected(const std::string &uid) {};
+void ServiceTemplateInterfaceBase::OnServiceDisconnected(uint16_t service_id) {};
 //[[[end]]]
