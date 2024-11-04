@@ -10,13 +10,16 @@ using namespace xbot::serviceif;
 ServiceInterfaceBase::ServiceInterfaceBase(uint16_t service_id,
                                            std::string type, uint32_t version,
                                            Context ctx)
-    : service_id_(service_id),
-      type_(std::move(type)),
-      version_(version),
-      ctx(ctx) {}
+  : service_id_(service_id),
+    type_(std::move(type)),
+    version_(version),
+    ctx(ctx) {
+}
+
 void ServiceInterfaceBase::Start() {
   ctx.serviceDiscovery->RegisterCallbacks(this);
 }
+
 bool ServiceInterfaceBase::StartTransaction(bool is_configuration) {
   // Lock like this, we need to keep locked until CommitTransaction()
   state_mutex_.lock();
@@ -30,11 +33,12 @@ bool ServiceInterfaceBase::StartTransaction(bool is_configuration) {
   FillHeader();
 
   auto header_ptr =
-      reinterpret_cast<xbot::datatypes::XbotHeader*>(buffer_.data());
+      reinterpret_cast<xbot::datatypes::XbotHeader *>(buffer_.data());
   *header_ptr = header_;
 
   return true;
 }
+
 bool ServiceInterfaceBase::CommitTransaction() {
   std::unique_lock lk{state_mutex_};
   if (!transaction_started_) {
@@ -46,7 +50,7 @@ bool ServiceInterfaceBase::CommitTransaction() {
   // we still have the lk - so it's OK to do this here
   state_mutex_.unlock();
 
-  if (uid_.empty()) {
+  if (!service_discovered_) {
     spdlog::debug("Service has no target, dropping packet");
     return false;
   }
@@ -55,7 +59,7 @@ bool ServiceInterfaceBase::CommitTransaction() {
     return false;
   }
   auto header_ptr =
-      reinterpret_cast<xbot::datatypes::XbotHeader*>(buffer_.data());
+      reinterpret_cast<xbot::datatypes::XbotHeader *>(buffer_.data());
   header_ptr->message_type = xbot::datatypes::MessageType::TRANSACTION;
   if (is_configuration_transaction_) {
     header_ptr->arg1 = 1;
@@ -65,12 +69,12 @@ bool ServiceInterfaceBase::CommitTransaction() {
   header_ptr->payload_size =
       buffer_.size() - sizeof(xbot::datatypes::XbotHeader);
 
-  return ctx.io->SendData(uid_, buffer_);
+  return ctx.io->SendData(service_id_, buffer_);
 }
 
-bool ServiceInterfaceBase::SendData(uint16_t target_id, const void* data,
+bool ServiceInterfaceBase::SendData(uint16_t target_id, const void *data,
                                     size_t size, bool is_configuration) {
-  if (uid_.empty()) {
+  if (!service_discovered_) {
     spdlog::debug("Service has no target, dropping packet");
     return false;
   }
@@ -88,8 +92,8 @@ bool ServiceInterfaceBase::SendData(uint16_t target_id, const void* data,
     // Reserve enough space for the new data
     buffer_.resize(buffer_.size() + size +
                    sizeof(xbot::datatypes::DataDescriptor));
-    auto descriptor_ptr = reinterpret_cast<xbot::datatypes::DataDescriptor*>(
-        buffer_.data() + buffer_size);
+    auto descriptor_ptr = reinterpret_cast<xbot::datatypes::DataDescriptor *>(
+      buffer_.data() + buffer_size);
     auto data_target_ptr = (buffer_.data() + buffer_size +
                             sizeof(xbot::datatypes::DataDescriptor));
     descriptor_ptr->payload_size = size;
@@ -108,7 +112,7 @@ bool ServiceInterfaceBase::SendData(uint16_t target_id, const void* data,
   FillHeader();
 
   auto header_ptr =
-      reinterpret_cast<xbot::datatypes::XbotHeader*>(buffer_.data());
+      reinterpret_cast<xbot::datatypes::XbotHeader *>(buffer_.data());
   *header_ptr = header_;
   header_ptr->payload_size = size;
   header_ptr->arg2 = target_id;
@@ -116,32 +120,41 @@ bool ServiceInterfaceBase::SendData(uint16_t target_id, const void* data,
 
   memcpy(buffer_.data() + sizeof(xbot::datatypes::XbotHeader), data, size);
 
-  return ctx.io->SendData(uid_, buffer_);
+  return ctx.io->SendData(service_id_, buffer_);
 }
-bool ServiceInterfaceBase::OnServiceDiscovered(std::string uid) {
+
+bool ServiceInterfaceBase::OnServiceDiscovered(uint16_t service_id) {
   std::unique_lock lk(state_mutex_);
-  if (uid_.empty()) {
+  if (service_id_ != service_id) {
+    spdlog::error("Got ServiceDiscovered callback for wrong service_id.");
+    return false;
+  }
+  if (!service_discovered_) {
     // Not bound yet, check, if requirements match. If so, bind do this service.
-    const auto info = ctx.serviceDiscovery->GetServiceInfo(uid);
+    const auto info = ctx.serviceDiscovery->GetServiceInfo(service_id_);
     if (info->service_id_ == service_id_ && info->description.type == type_ &&
         info->description.version == version_) {
       spdlog::info("Found matching service, registering callbacks");
       // Unregister service discovery callbacks, we're not interested anymore
       ctx.serviceDiscovery->UnregisterCallbacks(this);
-      // store the uid, so that we actually process the service messages
-      uid_ = uid;
+      service_discovered_ = true;
       // Register for data
-      ctx.io->RegisterCallbacks(uid, this);
+      ctx.io->RegisterCallbacks(service_id_, this);
       return true;
+    } else {
+      spdlog::warn("Got ServiceDiscovered call twice. There might be an issue with duplicated service_ids.");
     }
   }
   return false;
 }
+
 bool ServiceInterfaceBase::OnEndpointChanged(
-    std::string uid, uint32_t old_ip, uint16_t old_port, uint32_t new_ip,
-    uint16_t new_port) { /** we don't care **/
+  uint16_t service_id_, uint32_t old_ip, uint16_t old_port, uint32_t new_ip,
+  uint16_t new_port) {
+  /** we don't care, since we IO will lookup the endpoint for us **/
   return true;
 }
+
 void ServiceInterfaceBase::FillHeader() {
   using namespace std::chrono;
   header_.message_type = xbot::datatypes::MessageType::UNKNOWN;
@@ -156,5 +169,5 @@ void ServiceInterfaceBase::FillHeader() {
   }
   header_.timestamp =
       duration_cast<microseconds>(steady_clock::now().time_since_epoch())
-          .count();
+      .count();
 }

@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(xbot-service-interface
         src/Socket.cpp
-        src/ServiceInfo.cpp
         include/xbot-service-interface/ServiceInterfaceBase.hpp
         src/ServiceInterfaceBase.cpp
         include/xbot-service-interface/XbotServiceInterface.hpp
