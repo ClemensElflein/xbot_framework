@@ -34,6 +34,14 @@ cog.outl(f"bool {service['class_name']}::handleData(uint16_t target_id, const vo
 bool ServiceTemplateBase::handleData(uint16_t target_id, const void *payload, size_t length) {
 //[[[end]]]
 
+        /*[[[cog
+        if len(service['inputs']) == 0:
+            cog.outl("// Avoid unused parameter warnings.")
+            cog.outl("(void)payload;")
+            cog.outl("(void)length;")
+        ]]]*/
+        //[[[end]]]
+
         // Call the callback for this input
         switch (target_id) {
             /*[[[cog
@@ -130,7 +138,7 @@ bool ServiceTemplateBase::advertiseService() {
     scratch_buffer[index++] = 'i';
     scratch_buffer[index++] = 'p';
     scratch_buffer[index++] = 0x60 + len;
-    strncpy(reinterpret_cast<char*>(scratch_buffer+index), address, len);
+    strcpy(reinterpret_cast<char*>(scratch_buffer+index), address);
     index += len;
     scratch_buffer[index++] = 0x64;
     scratch_buffer[index++] = 'p';
@@ -239,6 +247,13 @@ cog.outl(f"bool {service['class_name']}::setRegister(uint16_t target_id, const v
 bool ServiceTemplateBase::setRegister(uint16_t target_id, const void *payload, size_t length) {
   //[[[end]]]
 
+  /*[[[cog
+  if len(service['registers']) == 0:
+      cog.outl("// Avoid unused parameter warnings.")
+      cog.outl("(void)payload;")
+      cog.outl("(void)length;")
+  ]]]*/
+  //[[[end]]]
 
   // Call the callback for this input
   switch (target_id) {

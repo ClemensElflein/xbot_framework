@@ -5,17 +5,22 @@
 #ifndef CONFIG_HPP
 #define CONFIG_HPP
 #include <cstdint>
+#include <type_traits>
+
+// Check, that uint8_t is the same as unsigned char, so that we can cast points without violating
+// the strict aliasing rules.
+static_assert(std::is_same_v<uint8_t, unsigned char>, "uint8_t is not an alias for unsigned char");
 
 namespace xbot::config {
 static constexpr uint16_t max_packet_size = 1500;
 static constexpr uint16_t max_service_count = 25;
 
-static uint16_t multicast_port = 4242;
+[[maybe_unused]] static uint16_t multicast_port = 4242;
 
 /**
  * Settings for remote logging
  */
-static const char *remote_log_multicast_address = "233.255.255.1";
+[[maybe_unused ]]static const char *remote_log_multicast_address = "233.255.255.1";
 static constexpr uint16_t max_log_length = 255;
 
 /**
@@ -35,7 +40,7 @@ static constexpr uint16_t max_sd_entry_size = 51;
 // Make sure that we have at least space for a 64 bit integer.
 static_assert(max_sd_entry_size > sizeof(uint64_t));
 static_assert(max_sd_entry_size > max_service_name_length);
-static const char *sd_multicast_address = "233.255.255.0";
+[[maybe_unused]] static const char *sd_multicast_address = "233.255.255.0";
 static constexpr uint32_t sd_advertisement_interval_micros = 10000000;
 // the fast sd advertisement time is used as long as the service is not yet
 // claimed.
