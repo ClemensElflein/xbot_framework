@@ -301,3 +301,10 @@ bool ServiceTemplateBase::setRegister(uint16_t target_id, const void *payload, s
   }
   return false;
 }
+
+/*[[[cog
+cog.outl(f"const char* {service['class_name']}::GetName() {{")
+]]]*/
+//[[[end]]]
+  return (const char*)SERVICE_NAME;
+}

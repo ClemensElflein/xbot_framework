@@ -16,8 +16,7 @@
 namespace xbot::service {
 class Service : public ServiceIo {
  public:
-  explicit Service(uint16_t service_id, uint32_t tick_rate_micros,
-                   void *processing_thread_stack,
+  explicit Service(uint16_t service_id, uint32_t tick_rate_micros, void *processing_thread_stack,
                    size_t processing_thread_stack_size);
 
   virtual ~Service();
@@ -37,15 +36,12 @@ class Service : public ServiceIo {
    * @param service Pointer to the service to start
    * @return null
    */
-  static void startProcessingHelper(void *service) {
-    static_cast<Service *>(service)->runProcessing();
-  }
+  static void startProcessingHelper(void *service) { static_cast<Service *>(service)->runProcessing(); }
 
  protected:
   // Buffer to serialize service announcements and also custom serialized data
   // (zcbor) or transactions.
-  uint8_t
-      scratch_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)];
+  uint8_t scratch_buffer[config::max_packet_size - sizeof(datatypes::XbotHeader)];
 
   // Track how much of the scratch_buffer is already full
   size_t scratch_buffer_fill_ = 0;
@@ -85,6 +81,11 @@ class Service : public ServiceIo {
    */
   virtual void OnStop() = 0;
 
+  /**
+   * Gets the service name
+   */
+  virtual const char *GetName() = 0;
+
  private:
   /**
    * The main thread for the service.
@@ -111,14 +112,10 @@ class Service : public ServiceIo {
 
   void runProcessing();
 
-  void HandleClaimMessage(datatypes::XbotHeader *header, const void *payload,
-                          size_t payload_len);
-  void HandleDataMessage(datatypes::XbotHeader *header, const void *payload,
-                         size_t payload_len);
-  void HandleDataTransaction(datatypes::XbotHeader *header, const void *payload,
-                             size_t payload_len);
-  void HandleConfigurationTransaction(datatypes::XbotHeader *header,
-                                      const void *payload, size_t payload_len);
+  void HandleClaimMessage(datatypes::XbotHeader *header, const void *payload, size_t payload_len);
+  void HandleDataMessage(datatypes::XbotHeader *header, const void *payload, size_t payload_len);
+  void HandleDataTransaction(datatypes::XbotHeader *header, const void *payload, size_t payload_len);
+  void HandleConfigurationTransaction(datatypes::XbotHeader *header, const void *payload, size_t payload_len);
 
   void fillHeader();
 
@@ -133,11 +130,9 @@ class Service : public ServiceIo {
   virtual bool isConfigured() = 0;
   virtual void clearConfiguration() = 0;
 
-  virtual bool handleData(uint16_t target_id, const void *payload,
-                          size_t length) = 0;
+  virtual bool handleData(uint16_t target_id, const void *payload, size_t length) = 0;
 
-  virtual bool setRegister(uint16_t target_id, const void *payload,
-                           size_t length) = 0;
+  virtual bool setRegister(uint16_t target_id, const void *payload, size_t length) = 0;
 };
 }  // namespace xbot::service
 

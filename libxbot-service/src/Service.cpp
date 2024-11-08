@@ -43,7 +43,7 @@ bool xbot::service::Service::start() {
 
   if (!thread::initialize(&process_thread_, Service::startProcessingHelper,
                           this, processing_thread_stack_,
-                          processing_thread_stack_size_)) {
+                          processing_thread_stack_size_, GetName())) {
     return false;
   }
 
