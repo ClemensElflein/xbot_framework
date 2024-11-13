@@ -135,9 +135,7 @@ bool xbot::service::sock::initialize(SocketPtr socket_ptr,
 
 void xbot::service::sock::deinitialize(SocketPtr socket) {
   if (socket != nullptr) {
-    auto fd_ptr = socket;
-    close(*fd_ptr);
-    delete fd_ptr;
+    close(*socket);
   }
 }
 

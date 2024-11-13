@@ -1,4 +1,6 @@
 function(add_service_interface SERVICE_INTERFACE_NAME JSON_FILE)
+    # generate the output directory, otherwise python will complain when multiple instances are run
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/include/${SERVICE_INTERFACE_NAME}Base.hpp ${CMAKE_CURRENT_BINARY_DIR}/generated/${SERVICE_INTERFACE_NAME}Base.cpp
             COMMAND ${Python3_EXECUTABLE} -m cogapp -d -I ${XBOT_CODEGEN_PATH}/xbot_codegen -D service_file=${JSON_FILE} -o ${CMAKE_CURRENT_BINARY_DIR}/generated/include/${SERVICE_INTERFACE_NAME}Base.hpp ${XBOT_CODEGEN_PATH}/templates/ServiceInterfaceTemplate.hpp
@@ -19,7 +21,8 @@ function(add_service_interface SERVICE_INTERFACE_NAME JSON_FILE)
 endfunction()
 
 function(target_add_service_interface TARGET_NAME SERVICE_INTERFACE_NAME JSON_FILE)
-
+    # generate the output directory, otherwise python will complain when multiple instances are run
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated/include)
     add_custom_command(
             OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generated/include/${SERVICE_INTERFACE_NAME}Base.hpp ${CMAKE_CURRENT_BINARY_DIR}/generated/${SERVICE_INTERFACE_NAME}Base.cpp
             COMMAND ${Python3_EXECUTABLE} -m cogapp -d -I ${XBOT_CODEGEN_PATH}/xbot_codegen -D service_file=${JSON_FILE} -o ${CMAKE_CURRENT_BINARY_DIR}/generated/include/${SERVICE_INTERFACE_NAME}Base.hpp ${XBOT_CODEGEN_PATH}/templates/ServiceInterfaceTemplate.hpp

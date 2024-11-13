@@ -55,6 +55,14 @@ public:
 
     /*[[[cog
     cog.outl(f"\u002f*\n{service['service_json']}\n*\u002f")
+    cog.outl(f"static constexpr unsigned char SERVICE_NAME[] = \"{service['type']}\";")
+    ]]]*/
+    //[[[end]]]
+
+    const char* GetName() override;
+
+    /*[[[cog
+    cog.outl(f"\u002f*\n{service['service_json']}\n*\u002f")
     cog.out("static constexpr unsigned char SERVICE_DESCRIPTION_CBOR[] = ");
     cog.outl(xbot_codegen.binary2c_array(service["service_cbor"]));
     ]]]*/

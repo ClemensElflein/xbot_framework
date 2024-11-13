@@ -19,6 +19,7 @@ cog.outl(f'#include "{service["class_name"]}.hpp"')
 #include <ulog.h>
 #include <xbot-service/Lock.hpp>
 #include <xbot-service/portable/system.hpp>
+#include <xbot-service/Io.hpp>
 
 
 /*[[[cog
@@ -32,6 +33,14 @@ cog.outl(f"bool {service['class_name']}::handleData(uint16_t target_id, const vo
 ]]]*/
 bool ServiceTemplateBase::handleData(uint16_t target_id, const void *payload, size_t length) {
 //[[[end]]]
+
+        /*[[[cog
+        if len(service['inputs']) == 0:
+            cog.outl("// Avoid unused parameter warnings.")
+            cog.outl("(void)payload;")
+            cog.outl("(void)length;")
+        ]]]*/
+        //[[[end]]]
 
         // Call the callback for this input
         switch (target_id) {
@@ -81,33 +90,9 @@ bool ServiceTemplateBase::advertiseService() {
 
     size_t index = 0;
     // Build CBOR payload
-    // 0xA4 = object with 4 entries
-    scratch_buffer[index++] = 0xA4;
+    // 0xA4 = object with 3 entries
+    scratch_buffer[index++] = 0xA3;
     // Key1
-    // 0x62 = text(3)
-    scratch_buffer[index++] = 0x63;
-    scratch_buffer[index++] = 'n';
-    scratch_buffer[index++] = 'i';
-    scratch_buffer[index++] = 'd';
-    // 0x84 = array with 4 entries (4x32 = 128 bit; our ID length)
-    scratch_buffer[index++] = 0x84;
-
-    uint8_t id[16];
-    if(!xbot::service::system::getNodeId(id, 16)) {
-        ULOG_ARG_ERROR(&service_id_, "Error fetching node ID");
-
-        return false;
-    }
-    for(size_t i = 0; i < sizeof(id); i+=4) {
-        // 0x1A == 32 bit unsigned, positive
-        scratch_buffer[index++] = 0x1A;
-        scratch_buffer[index++] = id[i+0];
-        scratch_buffer[index++] = id[i+1];
-        scratch_buffer[index++] = id[i+2];
-        scratch_buffer[index++] = id[i+3];
-    }
-
-    // Key2
     // 0x62 = text(3)
     scratch_buffer[index++] = 0x63;
     scratch_buffer[index++] = 's';
@@ -136,7 +121,7 @@ bool ServiceTemplateBase::advertiseService() {
     char address[16]{};
     uint16_t port = 0;
 
-    if(!xbot::service::sock::getEndpoint(&udp_socket_, address, sizeof(address), &port)) {
+    if(!xbot::service::Io::getEndpoint(address, sizeof(address), &port)) {
         ULOG_ARG_ERROR(&service_id_, "Error fetching socket address");
         return false;
     }
@@ -153,7 +138,7 @@ bool ServiceTemplateBase::advertiseService() {
     scratch_buffer[index++] = 'i';
     scratch_buffer[index++] = 'p';
     scratch_buffer[index++] = 0x60 + len;
-    strncpy(reinterpret_cast<char*>(scratch_buffer+index), address, len);
+    strcpy(reinterpret_cast<char*>(scratch_buffer+index), address);
     index += len;
     scratch_buffer[index++] = 0x64;
     scratch_buffer[index++] = 'p';
@@ -199,7 +184,7 @@ bool ServiceTemplateBase::advertiseService() {
     xbot::service::packet::PacketPtr ptr = xbot::service::packet::allocatePacket();
     xbot::service::packet::packetAppendData(ptr, &header, sizeof(header));
     xbot::service::packet::packetAppendData(ptr, scratch_buffer, header.payload_size);
-    return xbot::service::sock::transmitPacket(&udp_socket_, ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
+    return xbot::service::Io::transmitPacket(ptr, xbot::config::sd_multicast_address, xbot::config::multicast_port);
 }
 
 /*[[[cog
@@ -262,6 +247,13 @@ cog.outl(f"bool {service['class_name']}::setRegister(uint16_t target_id, const v
 bool ServiceTemplateBase::setRegister(uint16_t target_id, const void *payload, size_t length) {
   //[[[end]]]
 
+  /*[[[cog
+  if len(service['registers']) == 0:
+      cog.outl("// Avoid unused parameter warnings.")
+      cog.outl("(void)payload;")
+      cog.outl("(void)length;")
+  ]]]*/
+  //[[[end]]]
 
   // Call the callback for this input
   switch (target_id) {
@@ -308,4 +300,11 @@ bool ServiceTemplateBase::setRegister(uint16_t target_id, const void *payload, s
       return false;
   }
   return false;
+}
+
+/*[[[cog
+cog.outl(f"const char* {service['class_name']}::GetName() {{")
+]]]*/
+//[[[end]]]
+  return (const char*)SERVICE_NAME;
 }

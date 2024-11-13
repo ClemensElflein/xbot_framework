@@ -5,7 +5,6 @@ project(xbot-service C CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-
 # Allow logging using ulog
 #add_compile_definitions(ULOG_ENABLED)
 
@@ -15,6 +14,7 @@ add_library(xbot-service STATIC
         src/RemoteLogging.cpp
         src/ServiceIo.cpp
 )
+target_compile_options(xbot-service PRIVATE -Wall -Wextra -Werror -Wno-volatile)
 
 if (NOT DEFINED XBOT_CUSTOM_PORT_PATH)
     SET(XBOT_CUSTOM_PORT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/portable/linux)
