@@ -125,8 +125,8 @@ bool ServiceInterfaceBase::SendData(uint16_t target_id, const void *data,
 
 bool ServiceInterfaceBase::OnServiceDiscovered(uint16_t service_id) {
   std::unique_lock lk(state_mutex_);
+  // Check, if the service we're interested was discovered
   if (service_id_ != service_id) {
-    spdlog::error("Got ServiceDiscovered callback for wrong service_id.");
     return false;
   }
   if (!service_discovered_) {
@@ -157,6 +157,7 @@ bool ServiceInterfaceBase::OnEndpointChanged(
 
 void ServiceInterfaceBase::FillHeader() {
   using namespace std::chrono;
+  header_.service_id = service_id_;
   header_.message_type = xbot::datatypes::MessageType::UNKNOWN;
   header_.payload_size = 0;
   header_.protocol_version = 1;

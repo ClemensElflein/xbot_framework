@@ -267,6 +267,7 @@ void ServiceIOImpl::ClaimService(uint16_t service_id) {
                 sizeof(datatypes::ClaimPayload));
   auto header = reinterpret_cast<datatypes::XbotHeader *>(packet.data());
   header->message_type = datatypes::MessageType::CLAIM;
+  header->service_id = service_id;
   header->protocol_version = 1;
   header->arg1 = 0;
   header->arg2 = 0;

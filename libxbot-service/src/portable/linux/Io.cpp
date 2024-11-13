@@ -27,7 +27,7 @@ XBOT_THREAD_TYPEDEF io_thread_{};
 
 fd_set socket_set;
 
-void* runIo(void* arg) {
+void runIo(void* arg) {
   while (true) {
     timeval select_to{.tv_sec = 1, .tv_usec = 0};
     FD_ZERO(&socket_set);

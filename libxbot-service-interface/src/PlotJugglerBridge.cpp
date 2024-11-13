@@ -171,7 +171,7 @@ void PlotJugglerBridge::OnData(uint16_t service_id, uint64_t timestamp,
 
   try {
     nlohmann::json json = nlohmann::json::object(
-      {{service_id, {{output.name, {{"stamp", timestamp}, {"data", data}}}}}});
+      {{std::to_string(service_id), {{output.name, {{"stamp", timestamp}, {"data", data}}}}}});
     std::string dump = json.dump(2);
     socket_.TransmitPacket("127.0.0.1", 9870,
                            reinterpret_cast<const uint8_t *>(dump.c_str()),
