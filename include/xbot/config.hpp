@@ -9,7 +9,7 @@
 
 // Check, that uint8_t is the same as unsigned char, so that we can cast points without violating
 // the strict aliasing rules.
-static_assert(std::is_same_v<uint8_t, unsigned char>, "uint8_t is not an alias for unsigned char");
+static_assert(std::is_same<uint8_t, unsigned char>::value, "uint8_t is not an alias for unsigned char");
 
 namespace xbot::config {
 static constexpr uint16_t max_packet_size = 1500;

@@ -11,6 +11,7 @@
 using namespace xbot::service::queue;
 
 bool BlockingQueue::init(size_t size, void* buffer, size_t buffer_size) {
+  (void) buffer_size;
   // We need at least one space in the queue
   assert(size >= 1);
   buffer_ = static_cast<void**>(buffer);
