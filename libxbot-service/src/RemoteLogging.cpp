@@ -27,7 +27,10 @@ uint16_t log_sequence_no = 0;
 
 void remote_logger(ulog_level_t severity, char* msg, const void* args) {
   (void)args;
-  Lock lk(&logging_mutex);
+  (void)severity;
+  (void)msg;
+  // TODO: Implement
+  /*Lock lk(&logging_mutex);
 
   // Packet Header
   log_message_header.protocol_version = 0;
@@ -57,7 +60,7 @@ void remote_logger(ulog_level_t severity, char* msg, const void* args) {
     // socketTransmitPacket(logging_socket, log_packet,
     // config::remote_log_multicast_address, config::multicast_port);
     // }
-  }
+  }*/
 }
 
 bool startRemoteLogging() {

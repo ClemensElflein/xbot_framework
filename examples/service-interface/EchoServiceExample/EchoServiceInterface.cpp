@@ -7,7 +7,7 @@ EchoServiceInterface::EchoServiceInterface(uint16_t service_id,
     : EchoServiceInterfaceBase(service_id, ctx) {}
 EchoServiceInterface::~EchoServiceInterface() {}
 
-bool EchoServiceInterface::OnConfigurationRequested(const std::string& uid) {
+bool EchoServiceInterface::OnConfigurationRequested(uint16_t uid) {
   spdlog::info("Config Requested");
   std::string prefix = "Example Prefix: ";
 

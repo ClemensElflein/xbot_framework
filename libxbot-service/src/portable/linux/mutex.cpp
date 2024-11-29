@@ -7,11 +7,13 @@
 using namespace xbot::service::mutex;
 
 bool xbot::service::mutex::initialize(MutexPtr mutex) {
+  (void)mutex;
   // nothing to initialize
   return true;
 }
 
 void xbot::service::mutex::deinitialize(MutexPtr mutex) {
+  (void)mutex;
   // nothing to uninitialize
 }
 

@@ -105,4 +105,4 @@ bool xbot::service::queue::queuePushItem(QueuePtr queue, void* item) {
   return queue->push(item, 0);
 }
 
-void xbot::service::queue::deinitialize(QueuePtr queue) {}
+void xbot::service::queue::deinitialize(QueuePtr queue) { (void)queue; }

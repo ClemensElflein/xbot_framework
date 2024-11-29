@@ -18,7 +18,7 @@ class EchoServiceInterface : public EchoServiceInterfaceBase {
 
  protected:
  public:
-  bool OnConfigurationRequested(const std::string &uid) override;
+  bool OnConfigurationRequested(uint16_t service_id) override;
 
  protected:
   void OnEchoChanged(const char *new_value, uint32_t length) override;

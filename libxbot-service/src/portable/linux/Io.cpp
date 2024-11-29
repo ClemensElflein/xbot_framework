@@ -1,9 +1,8 @@
 //
 // Created by clemens on 7/14/24.
 //
-#include <sys/select.h>
+#include <ulog.h>
 
-#include <algorithm>
 #include <xbot-service/Io.hpp>
 #include <xbot-service/Lock.hpp>
 #include <xbot-service/portable/thread.hpp>
@@ -14,56 +13,69 @@ namespace xbot::service {
 // Keep track of the first registered service.
 // All services have a pointer to the next one, so we can loop through all
 // of them (for IO)
-ServiceIo* firstService_ = nullptr;
+static ServiceIo* firstService_ = nullptr;
+
+// This Socket is used for all UDP comms for all the services
+static XBOT_SOCKET_TYPEDEF udp_socket_{};
 
 /**
  * The IO thread is used to receive data for registered services.
  * On data reception, the handlePacket method will be called for the service.
  */
 #ifdef XBOT_ENABLE_STATIC_STACK
-uint8_t io_thread_stack_[config::service::io_thread_stack_size]{};
+static THD_WORKING_AREA(waIoThread, 128000);
 #endif
 XBOT_THREAD_TYPEDEF io_thread_{};
 
-fd_set socket_set;
+static const char* IO_THD_NAME = "xbot-io";
+
+using namespace xbot::service;
 
 void runIo(void* arg) {
+  (void)arg;
   while (true) {
-    timeval select_to{.tv_sec = 1, .tv_usec = 0};
-    FD_ZERO(&socket_set);
-    // Add all sockets to the set and then wait for one to receive data
-    int max_sd = 0;
-    for (ServiceIo* service = firstService_; service != nullptr;
-         service = service->next_service_) {
-      FD_SET(service->udp_socket_, &socket_set);
-      max_sd = std::max(max_sd, service->udp_socket_ + 1);
-    }
+    packet::PacketPtr packet = nullptr;
 
-    int res = select(max_sd, &socket_set, NULL, NULL, &select_to);
-    if (res <= 0) {
-      // Timeout, continue
-      continue;
-    }
+    if (sock::receivePacket(&udp_socket_, &packet)) {
+      // Got a packet, check if valid and put it into the processing queue.
+      void* buffer = nullptr;
+      size_t used_data = 0;
+      if (!packet::packetGetData(packet, &buffer, &used_data)) {
+        packet::freePacket(packet);
+        continue;
+      }
+      if (used_data < sizeof(datatypes::XbotHeader)) {
+        ULOG_ARG_ERROR(&service_id_, "Packet too short to contain header.");
+        packet::freePacket(packet);
+        continue;
+      }
 
-    for (ServiceIo* service = firstService_; service != nullptr;
-         service = service->next_service_) {
-      // Check, if the FD was ready
-      if (FD_ISSET(service->udp_socket_, &socket_set)) {
-        // Check, if service is running
-        packet::PacketPtr packet = nullptr;
-        if (sock::receivePacket(&service->udp_socket_, &packet)) {
-          {
-            Lock lk(&service->state_mutex_);
-            if (service->stopped) {
-              // service not running, free packet and go to next one
-              packet::freePacket(packet);
-              continue;
-            } else {
-              // Give packet to service
-              service->ioInput(packet);
-            }
+      const auto header = static_cast<datatypes::XbotHeader*>(buffer);
+      // Check, if the header size is correct
+      if (used_data - sizeof(datatypes::XbotHeader) != header->payload_size) {
+        // TODO: In order to allow chaining of xBot packets in the future,
+        // this needs to be adapted. (scan and split packets)
+        ULOG_ARG_ERROR(&service_id_,
+                       "Packet header size does not match actual packet size.");
+        packet::freePacket(packet);
+        continue;
+      }
+      bool packet_delivered = false;
+      for (ServiceIo* service = firstService_; service != nullptr;
+           service = service->next_service_) {
+        if (service->service_id_ == header->service_id) {
+          Lock lk(&service->state_mutex_);
+          if (!service->stopped) {
+            // Give packet to service
+            service->ioInput(packet);
+            packet_delivered = true;
+            break;
           }
         }
+      }
+      if (!packet_delivered) {
+        // service not running or not found
+        packet::freePacket(packet);
       }
     }
   }
@@ -77,9 +89,23 @@ bool Io::registerServiceIo(ServiceIo* service) {
   *last_service = service;
   return true;
 }
+bool Io::transmitPacket(packet::PacketPtr packet, uint32_t ip, uint16_t port) {
+  return sock::transmitPacket(&udp_socket_, packet, ip, port);
+}
+bool Io::transmitPacket(packet::PacketPtr packet, const char* ip,
+                        uint16_t port) {
+  return sock::transmitPacket(&udp_socket_, packet, ip, port);
+}
+bool Io::getEndpoint(char* ip, size_t ip_len, uint16_t* port) {
+  return sock::getEndpoint(&udp_socket_, ip, ip_len, port);
+}
 
 bool Io::start() {
-  return thread::initialize(&io_thread_, runIo, nullptr, nullptr, 0);
+  if (!sock::initialize(&udp_socket_, false)) {
+    return false;
+  }
+  return thread::initialize(&io_thread_, runIo, nullptr, nullptr, 0,
+                            IO_THD_NAME);
 }
 
 }  // namespace xbot::service
