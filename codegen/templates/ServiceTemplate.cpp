@@ -303,6 +303,7 @@ bool ServiceTemplateBase::setRegister(uint16_t target_id, const void *payload, s
 }
 
 /*[[[cog
+cog.outl(f"constexpr unsigned char {service['class_name']}::SERVICE_NAME[];")
 cog.outl(f"const char* {service['class_name']}::GetName() {{")
 ]]]*/
 //[[[end]]]

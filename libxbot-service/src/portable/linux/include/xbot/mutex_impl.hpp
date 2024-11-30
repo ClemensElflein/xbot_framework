@@ -7,6 +7,6 @@
 
 #include <mutex>
 
-#define XBOT_MUTEX_TYPEDEF std::mutex
+#define XBOT_MUTEX_TYPEDEF std::recursive_mutex
 
 #endif  // MUTEX_IMPL_HPP
