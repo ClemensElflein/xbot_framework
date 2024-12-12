@@ -9,6 +9,9 @@
   <url type="website">https://github.com/ClemensElflein</url>
 
   <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>python3-pip</buildtool_depend>
+  <buildtool_depend>python3-venv</buildtool_depend>
+  <build_depend>asio</build_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>
