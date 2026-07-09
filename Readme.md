@@ -59,6 +59,12 @@ code necessary for service discovery and configuration.
 
 All dependencies are included here as submodules. Not every dependency is needed by every part of the software.
 
+### /xbot_service_interface_py
+
+Python service interface — connect to xBot services from Python without any code generation. See
+[Python Interface](#python-interface) below for a summary, or the
+[package README](xbot_service_interface_py/README.md) for full details.
+
 ---
 
 ## Wire Protocol
@@ -252,6 +258,58 @@ target_add_service_interface(MyTarget MyInterfaceName path/to/service.json)
 ```
 
 Then inherit from the generated `MyServiceNameBase` or `MyInterfaceNameBase` class.
+
+---
+
+## Python Interface
+
+`xbot_service_interface_py` is a pure-Python client for xBot services — no codegen step required. It talks directly
+to the wire protocol described above, so it's a good fit for scripting, quick prototyping, ROS bridges, or driving
+services from Jupyter/IPython.
+
+Two ways to use a service:
+
+- **Schema provided:** pass a `service.json` file (or dict) to `ServiceInterface`. The schema is validated against
+  the service's advertisement on connect, and an `IncompatibleServiceError` aborts the connection on a mismatch.
+- **Schema-free:** omit the schema entirely. The full service description is embedded in the advertisement itself, so
+  inputs, outputs, registers, and RPC functions are all available immediately after discovery.
+
+```python
+from xbot_service_interface import XbotServiceIo, ServiceInterface
+
+xbot = XbotServiceIo(bind_ip='0.0.0.0')
+echo = ServiceInterface(service_id=1, schema='echo_service.json')
+xbot.register(echo)
+
+@echo.on_connected
+def connected():
+    echo.registers['Prefix'] = "py: "
+
+@echo.on_echo_changed
+def got_echo(value: str, timestamp: int):
+    print(f"echo: {value!r}")
+
+xbot.start()
+```
+
+Beyond the core send/receive/register API, the package includes:
+
+- **RPC calls** — synchronous `call_{name}(*args, timeout_ms=...)` with typed exceptions (`RpcTimeoutError`,
+  `RpcBusyError`, `RpcError`).
+- **Atomic transactions** — bundle multiple sends into one UDP packet via `with iface.transaction(): ...`.
+- **`xbot-shell`** — an IPython-based interactive shell (`pip install "xbot-service-interface-py[shell]"`) with
+  tab-completable service proxies, a `services()` discovery table, live output streaming (`svc.watch_all()`), and an
+  interactive register configuration wizard.
+- **`xbot-logs`** — a CLI remote log viewer for the `LOG` multicast stream, filterable by level.
+
+Install from a tagged release:
+
+```bash
+pip install "xbot-service-interface-py @ git+https://github.com/xtech/xbot_framework.git@v1.0.0#subdirectory=xbot_service_interface_py"
+```
+
+Requires Python 3.10+. Full API reference, type mapping table, and shell walkthrough in the
+[package README](xbot_service_interface_py/README.md).
 
 ---
 
