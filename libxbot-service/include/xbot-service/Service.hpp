@@ -131,10 +131,15 @@ class Service : public ServiceIo {
                                      XBOT_FUNCTION_FOR_METHOD(Service, &Service::AdvertiseService, this)};
   Schedule config_request_schedule{scheduler_, false, config::request_configuration_interval_micros,
                                    XBOT_FUNCTION_FOR_METHOD(Service, &Service::SendConfigurationRequest, this)};
+  // One-shot timer: if still unclaimed once this fires, stop fast-advertising.
+  Schedule sd_discovery_timeout_schedule_{scheduler_, false, config::sd_discovery_timeout_micros,
+                                          XBOT_FUNCTION_FOR_METHOD(Service, &Service::OnServiceDiscoveryTimeout, this)};
 
   uint32_t target_ip_ = 0;
   uint32_t target_port_ = 0;
   bool config_required_ = true;
+  // Set once sd_discovery_timeout_schedule_ fires without a claim; forces slow advertisement from then on.
+  bool sd_discovery_timed_out_ = false;
 
   // True, when the service is running (between Start() and Stop()).
   bool is_running_ = false;
@@ -183,6 +188,7 @@ class Service : public ServiceIo {
 
   void AdvertiseService();
   virtual bool AdvertiseServiceImpl() = 0;
+  void OnServiceDiscoveryTimeout();
 
   bool IsClaimed() {
     return target_ip_ != 0 && target_port_ != 0;

@@ -73,9 +73,22 @@ void xbot::service::Service::Stop() {
 
 void xbot::service::Service::OnLifecycleStatusChanged() {
   heartbeat_schedule_.SetEnabled(IsClaimed());
-  sd_advertisement_schedule.SetInterval(IsClaimed() ? config::sd_advertisement_interval_micros
-                                                    : config::sd_advertisement_interval_micros_fast);
+  sd_advertisement_schedule.SetInterval(IsClaimed() || sd_discovery_timed_out_
+                                            ? config::sd_advertisement_interval_micros
+                                            : config::sd_advertisement_interval_micros_fast);
+  // Only count down while unclaimed; once claimed or timed out, no need to fire again.
+  sd_discovery_timeout_schedule_.SetEnabled(!IsClaimed() && !sd_discovery_timed_out_);
   config_request_schedule.SetEnabled(config_required_ && IsClaimed());
+}
+
+void xbot::service::Service::OnServiceDiscoveryTimeout() {
+  if (IsClaimed()) {
+    // Got claimed in the same tick, nothing to do.
+    return;
+  }
+  ULOG_ARG_INFO(&service_id_, "Service not claimed after timeout, switching to slow advertisement");
+  sd_discovery_timed_out_ = true;
+  OnLifecycleStatusChanged();
 }
 
 bool xbot::service::Service::SendData(uint16_t target_id, const void *data, size_t size) {
@@ -314,6 +327,8 @@ void xbot::service::Service::HandleClaimMessage(xbot::datatypes::XbotHeader *hea
   const auto payload_ptr = reinterpret_cast<const datatypes::ClaimPayload *>(payload);
   target_ip_ = payload_ptr->target_ip;
   target_port_ = payload_ptr->target_port;
+  // Flag only means something for the unclaimed period that just ended.
+  sd_discovery_timed_out_ = false;
   heartbeat_schedule_.SetInterval(CalculateHeartbeatInterval(payload_ptr->heartbeat_micros));
 
   ULOG_ARG_INFO(&service_id_, "service claimed successfully.");

@@ -48,6 +48,10 @@ static constexpr uint32_t sd_advertisement_interval_micros = 10'000'000;
 // the fast sd advertisement time is used as long as the service is not yet
 // claimed.
 static constexpr uint32_t sd_advertisement_interval_micros_fast = 1'000'000;
+// If the service stays unclaimed for this long, fall back to the slow
+// advertisement interval (no point spamming the network for a service
+// nobody wants).
+static constexpr uint32_t sd_discovery_timeout_micros = 60'000'000;
 
 // Time between request_configuration messages
 static constexpr uint32_t request_configuration_interval_micros = 1'000'000;
