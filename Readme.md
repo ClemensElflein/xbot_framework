@@ -1,36 +1,32 @@
 # xBot Framework
 
-## Bridging the Gap in Robotics Development
+## A Lightweight Alternative to ROS at the Hardware Boundary
 
-Building robust and reusable robotics systems can be challenging. The Robot Operating System (ROS) provides powerful
-middleware for abstracting communication between high-level components, but struggles at the hardware level, requiring
-specialized firmware to interface with low-level devices. Existing solutions like microROS introduce a direct dependency
-on ROS which complicates debugging, bloats the low-level firmware and leads to tight coupling between high-level
-application specific code and low-level drivers.
+ROS is excellent middleware for high-level robotics components, but it's the wrong tool at the hardware boundary.
+Solutions like microROS pull a full ROS dependency onto the microcontroller, which bloats firmware, complicates
+debugging, and tightly couples low-level drivers to application-specific code.
 
-The **xBot Framework** offers a lightweight, independent solution for interfacing directly with sensors and actuators
-without adding heavy dependencies. This new framework helps integrating hardware components seamlessly into the broader
-robotics ecosystem.
+**xBot Framework** solves this with a small, independent protocol for talking to sensors and actuators — no ROS
+dependency required on the device. It's the hardware layer powering **[OpenMower](https://github.com/ClemensElflein/OpenMower)**,
+running in production on real mowers today.
 
 ### Features
 
-- **Service-Based Architecture:** Low level features (e.g. sensors or actuators) are implemented as a service,
-  described by a JSON interface and implemented as C++ classes. This modular design allows for reusable hardware
-  communication. Service implementations can be done either on a microcontroller or a Linux system, since the
-  communication is abstracted from the actual operating system.
-- **Hardware Communication Simplified:** Define services in JSON format to generate a C++ code template, allowing for
-  easy communication with hardware components such as ESCs, IMUs, and GPIOs.
-- **Lightweight and Portable:** The framework has minimal dependencies and avoids dynamic memory allocation, making it
-  ideal for microcontrollers, but can also be used on Linux systems.
-- **Service Discovery:** The framework includes automatic service discovery, making it easy to connect your low-level
-  services to your application specific high-level code.
+- **Service-Based Architecture:** Low-level features (sensors, actuators) are implemented as services, described by a
+  JSON interface and implemented as C++ classes. Services run identically on a microcontroller or on Linux — the
+  same code, the same protocol, no porting layer.
+- **Hardware Communication Simplified:** Define a service in JSON and the code generator produces the C++ boilerplate
+  for talking to ESCs, IMUs, GPIOs, and other hardware.
+- **Lightweight and Portable:** Minimal dependencies, zero dynamic memory allocation. Built for microcontrollers,
+  runs just as well on Linux.
+- **Service Discovery:** Services advertise themselves automatically over UDP multicast — no manual wiring to connect
+  low-level services to high-level application code.
 - **Runtime:**
-    - **REST API:** Discover services programmatically. (Status: Working — port 18080, optional, pass `start_rest_api=true` to `Start()`)
-    - **Web UI:** Visually explore devices, monitor data, and test actuators. (Status: Planned)
-    - **Firmware Update:** Update the firmware on your board directly through the web interface using our included
-      Ethernet bootloader. (Status: Working - stable)
-- **Performant Serialization:** Data is transmitted schemaless and binary packed. This leads to less traffic and fast
-  serialization times.
+    - **REST API:** Discover services programmatically. Stable. Port 18080, optional — pass `start_rest_api=true` to `Start()`.
+    - **Firmware Update:** Flash firmware directly through the built-in Ethernet bootloader. Stable, used in production.
+    - **Web UI:** Visually explore devices, monitor data, and test actuators. Planned.
+- **Performant Serialization:** Data is transmitted schemaless and binary-packed for low traffic and fast
+  serialization.
 
 ## Repository Structure
 
@@ -261,5 +257,7 @@ Then inherit from the generated `MyServiceNameBase` or `MyInterfaceNameBase` cla
 
 ## Status and Contributions
 
-The xBot Framework is currently a work in progress, and we welcome any input or feedback. If you'd like to contribute,
-please read our contributing guidelines and check out our issue tracker.
+xBot Framework is stable and running in production as the hardware layer for **[OpenMower](https://github.com/ClemensElflein/OpenMower)**.
+The wire protocol, service discovery, and codegen are solid; the Web UI is the one piece still on the roadmap.
+
+Contributions and feedback are welcome — check the issue tracker to get started.
